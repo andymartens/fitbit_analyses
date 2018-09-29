@@ -32,91 +32,38 @@ sns.set_style('white')
 # -----------------------------------------------------------------------------
 # ---------------------- organized saved pickle files -------------------------
 
-
 # -----
 # sleep
 
-
-# test date range
-
-# for night with stages info
-dates = pd.date_range('06/26/2017', '06/26/2017', freq='D')
-date = dates[0]
-date = str(date.year) + '-' + date.strftime('%m') + '-' + date.strftime('%d')
-
-# for night within 'classic', i.e., without stages info
-dates = pd.date_range('06/25/2017', '06/25/2017', freq='D')
-date = dates[0]
-date = str(date.year) + '-' + date.strftime('%m') + '-' + date.strftime('%d')
-
-with open('sleep'+date+'.pkl', 'rb') as picklefile:
-    sleep_test_data = pickle.load(picklefile)
-
-
-
-# to get timeseries
-
-# account for multiple sleeping periods in same day
-
-dates = pd.date_range('12/01/2017', '02/01/2018', freq='D')
-#date = dates[0]
-#dates = pd.date_range('01/15/2018', '01/15/2018', freq='D')
-#dates = pd.date_range('01/31/2018', '01/31/2018', freq='D')
-
-for date in dates:
-    date = str(date.year) + '-' + date.strftime('%m') + '-' + date.strftime('%d')
-    # get sleep data from day
-    with open('sleep'+date+'.pkl', 'rb') as picklefile:
-        sleep_test_data = pickle.load(picklefile)
-    print(date, sleep_test_data['summary']['totalSleepRecords'])
-
-#2018-07-24 2
-#2018-07-25 2
-#2018-01-16 3
-
-dates = pd.date_range('2018-01-16', '2018-01-16', freq='D')
-#dates = pd.date_range('2018-02-15', '2018-02-15', freq='D')
-
-date = dates[0]
-date = str(date.year) + '-' + date.strftime('%m') + '-' + date.strftime('%d')
-# get sleep data from day
-with open('sleep'+date+'.pkl', 'rb') as picklefile:
-    sleep_test_data = pickle.load(picklefile)
-print(date, sleep_test_data['summary']['totalSleepRecords'])
-len(sleep_test_data['sleep'])  # number of sleep periods
-
-
 def open_sleep_dict(date):
     date = str(date.year) + '-' + date.strftime('%m') + '-' + date.strftime('%d')
-    with open('sleep'+date+'.pkl', 'rb') as picklefile:
-        sleep_data_day_dict = pickle.load(picklefile)
+    try:
+        with open('sleep'+date+'.pkl', 'rb') as picklefile:
+            sleep_data_day_dict = pickle.load(picklefile)
+    except:
+        print()
+        'no dict on ' + date
+        print()
     return sleep_data_day_dict
 
-
-sleep_records_number_day, minutes_sleep_day, summary_stages_day, time_in_bed_day = get_sleep_summary_for_all_sleep_in_dict(sleep_test_data)
-sleep_test_data['sleep'][0]['type']
-sleep_test_data['summary']['stages']
-
-
-
 def get_sleep_summary_for_all_sleep_in_dict(sleep_data_day_dict):
-    """ If more than 1 period of sleep, then hav multiple sleep records
+    """ If more than 1 period of sleep, then have multiple sleep records
         and the following summarizes all the sleep periods for that day. """
     sleep_records_number_day = sleep_data_day_dict['summary']['totalSleepRecords']
     minutes_sleep_day = sleep_data_day_dict['summary']['totalMinutesAsleep']
     summary_stages_day = sleep_data_day_dict['summary']['stages']
     time_in_bed_day = sleep_data_day_dict['summary']['totalTimeInBed']
     return sleep_records_number_day, minutes_sleep_day, summary_stages_day, time_in_bed_day
-
+    
 def get_sleep_info_for_day_dicts(date):
     sleep_data_day_dict = open_sleep_dict(date)
-    sleep_record_classic_or_stages = sleep_data_day_dict['sleep'][0]['type']
+    sleep_record_classic_or_stages = sleep_data_day_dict['sleep'][0]['type'] 
     sleep_wakings_timeline_day = []
     start_end_sleep_timeline_day = []
     for sleep_record in range(len(sleep_data_day_dict['sleep'])):
-        sleep_wakings_timeline = sleep_data_day_dict['sleep'][sleep_record]['levels']['data']
-        end_sleep = sleep_data_day_dict['sleep'][sleep_record]['endTime']
-        start_sleep = sleep_data_day_dict['sleep'][sleep_record]['startTime']
+        sleep_wakings_timeline = sleep_data_day_dict['sleep'][sleep_record]['levels']['data']  
+        end_sleep = sleep_data_day_dict['sleep'][sleep_record]['endTime']  
+        start_sleep = sleep_data_day_dict['sleep'][sleep_record]['startTime']      
         start_end_sleep_timeline = [(start_sleep, end_sleep)]
         #sleep_wakings_timeline = [{'dateTime':start_sleep, 'level':'start_sleep', 'seconds':np.nan}] + sleep_wakings_timeline
         #sleep_wakings_timeline = sleep_wakings_timeline + [{'dateTime':end_sleep, 'level':'end_sleep', 'seconds':np.nan}]
@@ -125,211 +72,221 @@ def get_sleep_info_for_day_dicts(date):
     sleep_records_number_day, minutes_sleep_day, summary_stages_day, time_in_bed_day = get_sleep_summary_for_all_sleep_in_dict(sleep_data_day_dict)
     return sleep_record_classic_or_stages, sleep_wakings_timeline_day, start_end_sleep_timeline_day, sleep_records_number_day, minutes_sleep_day, summary_stages_day, time_in_bed_day
 
-
-#def get_sleep_info_for_day_dicts(date):
-#    sleep_data_day_dict = open_sleep_dict(date)
-#    if sleep_data_day_dict['sleep'][0]['type'] == 'classic':
-#        sleep_wakings_timeline_day = []
-#        sleep_stages_timeline_day = []
-#        for sleep_record in range(len(sleep_data_day_dict['sleep'])):
-#            sleep_wakings_timeline = sleep_data_day_dict['sleep'][sleep_record]['levels']['data']
-#            sleep_wakings_timeline_day = sleep_wakings_timeline_day + sleep_wakings_timeline
-#        sleep_records_number_day, minutes_sleep_day, summary_stages_day, time_in_bed_day = get_sleep_summary_for_all_sleep_in_dict(sleep_data_day_dict)
-#    elif sleep_data_day_dict['sleep'][0]['type'] == 'stages':
-#        sleep_wakings_timeline_day = []
-#        sleep_stages_timeline_day = []
-#        for sleep_record in range(len(sleep_data_day_dict['sleep'])):
-#            sleep_wakings_timeline = sleep_data_day_dict['sleep'][sleep_record]['levels']['shortData']
-#            sleep_wakings_timeline_day = sleep_wakings_timeline_day + sleep_wakings_timeline
-#            sleep_stages_timeline = sleep_data_day_dict['sleep'][sleep_record]['levels']['data']
-#            sleep_stages_timeline_day = sleep_stages_timeline_day + sleep_stages_timeline
-#        sleep_records_number_day, minutes_sleep_day, summary_stages_day, time_in_bed_day = get_sleep_summary_for_all_sleep_in_dict(sleep_data_day_dict)
-#    return sleep_wakings_timeline_day, sleep_stages_timeline_day, sleep_records_number_day, minutes_sleep_day, summary_stages_day, time_in_bed_day
-
 def return_dicts_w_sleep_info_for_list_of_dates(dates):
     date_to_classic_or_stages_dict = {}
     date_to_sleeps_dict = {}
     date_to_minutes_asleep_dict = {}
     # don't believe these stages dicts but keep for now
     # they're freq exactly the same for diff dates
-    # also not sure date of date_to_classic_or_stages_dict and
+    # also not sure date of date_to_classic_or_stages_dict and 
     # date_to_minutes_asleep_dict matches up with date as I'll be thinking about it
     date_to_light_dict = {}
     date_to_deep_dict = {}
     date_to_rem_dict = {}
     date_to_wake_dict = {}
     #sleep_stages_timeline_all = []
-    sleep_wakings_timeline_all = []
+    sleep_type_events_timeline_all = []
     start_end_sleep_timeline_all = []
     for date in dates:
-        print(date)
-        sleep_record_classic_or_stages, sleep_wakings_timeline_day, start_end_sleep_timeline_day, sleep_records_number_day, minutes_sleep_day, summary_stages_day, time_in_bed_day = get_sleep_info_for_day_dicts(date)
-        sleep_wakings_timeline_all = sleep_wakings_timeline_all + sleep_wakings_timeline_day
-        start_end_sleep_timeline_all = start_end_sleep_timeline_all + start_end_sleep_timeline_day
-        date_to_classic_or_stages_dict[date] = sleep_record_classic_or_stages
-        date_to_sleeps_dict[date] = sleep_records_number_day
-        date_to_minutes_asleep_dict[date] = minutes_sleep_day
-        date_to_light_dict[date] = summary_stages_day['light']
-        date_to_deep_dict[date] = summary_stages_day['deep']
-        date_to_rem_dict[date] = summary_stages_day['rem']
-        date_to_wake_dict[date] = summary_stages_day['wake']
-    return sleep_wakings_timeline_all, start_end_sleep_timeline_all, date_to_classic_or_stages_dict, date_to_sleeps_dict, date_to_minutes_asleep_dict
+        try:
+            sleep_data_day_dict = open_sleep_dict(date)
+            print(date)
+            sleep_record_classic_or_stages, sleep_wakings_timeline_day, start_end_sleep_timeline_day, sleep_records_number_day, minutes_sleep_day, summary_stages_day, time_in_bed_day = get_sleep_info_for_day_dicts(date)
+            sleep_type_events_timeline_all = sleep_type_events_timeline_all + sleep_wakings_timeline_day
+            start_end_sleep_timeline_all = start_end_sleep_timeline_all + start_end_sleep_timeline_day
+            date_to_classic_or_stages_dict[date] = sleep_record_classic_or_stages
+            date_to_sleeps_dict[date] = sleep_records_number_day
+            date_to_minutes_asleep_dict[date] = minutes_sleep_day
+            date_to_light_dict[date] = summary_stages_day['light']
+            date_to_deep_dict[date] = summary_stages_day['deep']
+            date_to_rem_dict[date] = summary_stages_day['rem']
+            date_to_wake_dict[date] = summary_stages_day['wake']
+        except:
+            print()
+            print('no dict on ' + str(date))
+            print()
+    return sleep_type_events_timeline_all, start_end_sleep_timeline_all, date_to_classic_or_stages_dict, date_to_sleeps_dict, date_to_minutes_asleep_dict
+
+def get_df_sleep_30_sec_records(start_end_sleep_timeline_all):
+    asleep_times_all = []
+    for row in start_end_sleep_timeline_all:
+        print(row)
+        #dates_sleep_episode = pd.date_range(row[0], row[1], freq='30s')
+        dates_sleep_episode = list(pd.date_range(row[0], row[1], freq='30s'))
+        asleep_times_all = asleep_times_all + dates_sleep_episode
+    df_asleep_times = pd.DataFrame(asleep_times_all).rename(columns={0:'date_time'})
+    return df_asleep_times
+
+def get_dict_for_30_sec_records_for_diff_sleep_levels(sleep_type_events_timeline_all):
+    """ Takes the sleep_type_events_timeline_all with a row for a type of sleep event
+    and the number of seconds of that event. Produces a dict with the 30-sec 
+    periods was in each of the sleep categories in the dictionary below. """
+    sleep_info_dict = {'deep':[], 'light':[], 'rem':[], 'wake':[], 
+                       'restless':[], 'asleep':[], 'awake':[], 'unknown':[]}
+    for sleep_info_row in sleep_type_events_timeline_all[:]:
+        print(sleep_info_row)
+        sleep_info = sleep_info_row['level']
+        time = sleep_info_row['dateTime']
+        periods_to_enter = sleep_info_row['seconds']/30
+        times_in_sleep_level = list(pd.date_range(start=time, periods=periods_to_enter, freq='30s'))
+        sleep_info_dict[sleep_info] = sleep_info_dict[sleep_info] + times_in_sleep_level
+    return sleep_info_dict  
 
 
-dates = pd.date_range('2018-01-15', '2018-01-31', freq='D')
-sleep_wakings_timeline_all, start_end_sleep_timeline_all, date_to_classic_or_stages_dict, date_to_sleeps_dict, date_to_minutes_asleep_dict = return_dicts_w_sleep_info_for_list_of_dates(dates)
+def map_sleep_event_types_onto_df_sleep(df_sleep, sleep_info_dict, sleep_event):
+    df_sleep_event = pd.DataFrame(sleep_info_dict[sleep_event]).rename(columns={0:'date_time'})
+    df_sleep_event[sleep_event] = 1
+    datetime_to_sleep_event_dict = dict(zip(df_sleep_event['date_time'], df_sleep_event[sleep_event]))
+    df_sleep[sleep_event] = df_sleep['date_time'].map(datetime_to_sleep_event_dict)
+    df_sleep[sleep_event].replace(np.nan, 0, inplace=True)
+    return df_sleep
 
-len(start_end_sleep_timeline_all)
-len(dates)
+def map_start_and_end_sleep_times_onto_df_sleep(df_sleep, start_end_sleep_timeline_all):
+    df_start_end_times = pd.DataFrame(start_end_sleep_timeline_all).rename(columns={0:'start', 1:'end'})
+    df_start_end_times['flag'] = 1
+    df_start_end_times['start'] = pd.to_datetime(df_start_end_times['start'])
+    df_start_end_times['end'] = pd.to_datetime(df_start_end_times['end'])
+    datetime_to_start_sleep_time_dict = dict(zip(df_start_end_times['start'], df_start_end_times['flag']))
+    datetime_to_end_sleep_time_dict = dict(zip(df_start_end_times['end'], df_start_end_times['flag']))
+    df_sleep['start_sleep'] = df_sleep['date_time'].map(datetime_to_start_sleep_time_dict)
+    df_sleep['end_sleep'] = df_sleep['date_time'].map(datetime_to_end_sleep_time_dict)
+    return df_sleep
 
-asleep_times_all = []
-for row in start_end_sleep_timeline_all:
-    print(row)
-    #dates_sleep_episode = pd.date_range(row[0], row[1], freq='30s')
-    dates_sleep_episode = list(pd.date_range(row[0], row[1], freq='30s'))
-    asleep_times_all = asleep_times_all + dates_sleep_episode
-
-df_asleep_times = pd.DataFrame(asleep_times_all).rename(columns={0:'date_time'})
-df_asleep_times
-# this works. this is the df w sleep.
-# what the first date i can get this from?
-# go to api and get earliest dates too.
-# go from start to started 6/18/2017. start sometimes in sept of 2016?
-
-
-
-
-# should re-do this so every 30 sec? then avg to every min?
-
-# can i get a range of times for each row in timing
-# and use that to create a df?
-
-pd.date_range(start='1/1/2018', periods=5, freq='30s')
-
-# use the start-time to end-time for sleep periods to create a sleep df
-# then can either map on the sleep level info from a dict and
-# can ffill certain number of times based on the seconds info
-# (or could also create 30 sec ranges of the types of sleep
-# and create a df and merge witht the full sleep df. whichever is
-# faster. i assume the ffill is faster.) then would have df of all
-# sleep periods with some blanks for sleep level. those are awake
-# periods witin the sleep periods. will need to do checks to make sure
-# those make sense. i can also use that full sleep df to get the awake
-# periods. do i create a full df of all 30 sec periods for 2 years and
-# then delete times from the full sleep df? i guess so. I think i have
-# the ram for it? what if i don't? new laptop? do on the cloud? wikari?
-# anaconda cloud? then in the awake
-
-# SKIP:
-# could just create list for each deep or light or rem
-# or asleep or restless. then would have big df with ea
-# row a 30 sec interval and a type of sleep.
-# how to deal w start and end? then insert start and end?
-# what if already in df? then don't insert. but if not
-# in df, then would want to resample between start and next
-# and between end and before? if necessary. may not be necessary?
-# could do outer merge on date-time with separate df for start
-# and end date-time. so have new start and end columns. or could
-# get start-end range and a df. and use that and merge. and
-# then could do some ffilling or back filling if necessary.
+# don't really need this f now, but can use for double check
+#def map_on_sleep_wake_info(df_sleep, sleep_type_events_timeline_all):
+#    """Takes df_sleep -- with a row for each 30-sec period that asleep -- and
+#    maps on whether that period was the beginning of a sleep type (e.g., rem, deep, awake)."""
+#    df_sleep_wake = pd.DataFrame(sleep_type_events_timeline_all)
+#    df_sleep_wake['date_time'] = pd.to_datetime(df_sleep_wake['dateTime'])
+#    del df_sleep_wake['dateTime']
+#    datetime_to_level_sleep_dict = dict(zip(df_sleep_wake['date_time'], df_sleep_wake['level']))
+#    datetime_to_seconds_at_level_sleep_dict = dict(zip(df_sleep_wake['date_time'], df_sleep_wake['seconds']))
+#    df_sleep['level_sleep'] = df_sleep['date_time'].map(datetime_to_level_sleep_dict)
+#    df_sleep['level_sleep_seconds'] = df_sleep['date_time'].map(datetime_to_seconds_at_level_sleep_dict)
+#    return df_sleep
 
 
+#dates = pd.date_range('2018-07-01', '2018-08-01', freq='D')
+# get all dates:
+dates = pd.date_range('2016-10-01', '2018-09-25', freq='D')
+
+sleep_type_events_timeline_all, start_end_sleep_timeline_all, date_to_classic_or_stages_dict, date_to_sleeps_dict, date_to_minutes_asleep_dict = return_dicts_w_sleep_info_for_list_of_dates(dates)
+df_sleep = get_df_sleep_30_sec_records(start_end_sleep_timeline_all)
+sleep_info_dict = get_dict_for_30_sec_records_for_diff_sleep_levels(sleep_type_events_timeline_all)
+
+df_sleep = map_sleep_event_types_onto_df_sleep(df_sleep, sleep_info_dict, 'deep')
+df_sleep = map_sleep_event_types_onto_df_sleep(df_sleep, sleep_info_dict, 'light')
+df_sleep = map_sleep_event_types_onto_df_sleep(df_sleep, sleep_info_dict, 'rem')
+df_sleep = map_sleep_event_types_onto_df_sleep(df_sleep, sleep_info_dict, 'wake')
+df_sleep = map_sleep_event_types_onto_df_sleep(df_sleep, sleep_info_dict, 'restless')
+df_sleep = map_sleep_event_types_onto_df_sleep(df_sleep, sleep_info_dict, 'awake')
+
+df_sleep.shape  # (525556, 7)
+df_sleep.head(10)
+#df_sleep = map_sleep_event_types_onto_df_sleep(df_sleep, sleep_info_dict, 'unknown')
+#sleep_info_dict['unknown']
+
+def consolidate_wake_and_awake_flags(df_sleep):
+    df_sleep.loc[(df_sleep['awake']==1) | 
+            (df_sleep['wake']==1), 'awake'] = 1
+    del df_sleep['wake']
+    return df_sleep
+
+df_sleep = consolidate_wake_and_awake_flags(df_sleep)
+
+sleep_event_types_list = ['deep', 'light', 'rem', 'restless', 'awake']
+for sleep_event_type in sleep_event_types_list:
+    print(sleep_event_type)
+    print(df_sleep[sleep_event_type].value_counts(normalize=True).round(3))
+    print()
+
+#df_sleep['sum_sleep_event_types'] = df_sleep[sleep_event_types_list].sum(axis=1)
+#df_sleep['sum_sleep_event_types'].value_counts()
+# no rows have two event types. good.
+# some rows have no event types. count those as sleep?
+
+# map on one more col that has start and end of sleep periods
+df_sleep = map_start_and_end_sleep_times_onto_df_sleep(df_sleep, start_end_sleep_timeline_all)
+df_sleep.head()
+df_sleep.tail()
+
+df_sleep.to_pickle('df_sleep.pkl')
+df_sleep[['date_time']].to_pickle('df_sleep_skeleton.pkl')
+
+
+# descriptives
+# loop though -- by day, how many hours alseep for?
+
+# get df_awake 
+# get full df of 30-sec periods and delete df_sleep?
+# then map ont hr
+# then compute resting hr w 10-min moving avg.
+
+# map on hr to sleep
+# create sleep metrics? 
+# plot several sleep hr timeseries in a row to think about what to extract?
+
+
+# -------
+# hr data
+
+def open_hr_dict(date):
+    date = str(date.year) + '-' + date.strftime('%m') + '-' + date.strftime('%d')
+    try:
+        with open('hr'+date+'.pkl', 'rb') as picklefile:
+            hr_data_day_dict = pickle.load(picklefile)
+    except:
+        print()
+        'no dict on ' + date
+        print()
+    return hr_data_day_dict
+
+
+dates = pd.date_range('2018-09-20', '2018-09-21', freq='D')
+date = dates[0]
+hr_data_day_dict = open_hr_dict(date)
+
+hr_data_day_dict.keys()  # dict_keys(['activities-heart-intraday', 'activities-heart'])
+hr_data_day_dict['activities-heart-intraday'].keys()  # hr min by min
+hr_data_day_dict['activities-heart-intraday']['datasetType']
+hr_data_day_dict['activities-heart-intraday']['datasetInterval']
+hr_data_day_dict['activities-heart-intraday']['dataset'][:30]
+
+hr_data_day_dict['activities-heart']  # hr zone stuff: fat burn and cardio
+
+
+def produce_df_hr(dates):
+    """ Give dates and produce df hr. """
+    hr_ts_list = []
+    date_ts_list = []
+    for date in dates:
+        date_short = str(date.year) + '-' + date.strftime('%m') + '-' + date.strftime('%d')
+
+        try:
+            hr_data_day_dict = open_hr_dict(date)
+            hr_ts_list = hr_ts_list + hr_data_day_dict['activities-heart-intraday']['dataset']
+            date_list = [date_short]*len(hr_data_day_dict['activities-heart-intraday']['dataset'])
+            date_ts_list = date_ts_list + date_list
+        except:
+            print()
+            print('no dict on ' + str(date))
+            print()
+    df_hr = pd.DataFrame(hr_ts_list).rename(columns={'value':'hr'})
+    df_date = pd.DataFrame(date_ts_list).rename(columns={0:'date'})
+    df_hr_date = pd.concat([df_date, df_hr], axis=1)
+    df_hr_date['date_time'] = pd.to_datetime(df_hr_date['date'] + ' ' +df_hr_date['time'])
+    return df_hr_date
+ 
+    
+dates = pd.date_range('2018-09-01', '2018-09-21', freq='D')
+df_hr = produce_df_hr(dates)
+df_hr.dtypes
+df_hr.head()
+    
 
 
 
 
-# once i have the full sleep df, get awake df by subtracting sleep df?
-
-
-
-df_sleep['date_time'] = pd.to_datetime(df_sleep['dateTime'])
-del df_sleep['dateTime']
-
-df_sleep['date'] = pd.to_datetime(df_sleep['date_time'].dt.date)
-df_sleep['time'] = df_sleep['date_time'].dt.time
-df_sleep.set_index('date_time', inplace=True)
-
-# plan: turn time part into just hour and minute. cut off sec.
-# then create dict and map onto a resampled-by-min df
-df_sleep['time'] = df_sleep['time'].astype(str)
-#df_sleep['time'].astype(str).str.split(':')
-df_sleep['hour_min'] = df_sleep['time'].astype(str).str[:5]
-df_sleep['hour_min'] = df_sleep['hour_min']+':00'
-# can now use this to map sleep stages onto a df resampled by min
-
-df_sleep['date_time'] = pd.to_datetime(df_sleep['date'].astype(str) + ' ' + df_sleep['hour_min'])
-datetime_to_sleep_stage_dict = dict(zip(df_sleep['date_time'], df_sleep['level']))
-
-#df_sleep.resample('min').interpolate()
-df_sleep = df_sleep.resample('min').median()
-len(df_sleep)
-df_sleep['date_time'] = df_sleep.index
-df_sleep['sleep_stage'] = df_sleep['date_time'].map(datetime_to_sleep_stage_dict)
-
-df_sleep = df_sleep.sort_values(by='date_time')
-
-
-
-
-
-
-
-
-len(sleep_wakings_timeline_day)
-len(sleep_wakings_timeline)
-# these timelines can be out of order
-# should but in chronologial order and then process
-
-sleep_test_data['sleep'][0]['type']
-
-if sleep_test_data['sleep'][0]['type'] == 'classic':
-
-    # ---------------------------------------------------------------------
-    # all these i can calculate myself once i have a ts. so don't worry now.
-    duration = sleep_test_data['sleep'][0]['duration']
-    efficiency = sleep_test_data['sleep'][0]['efficiency']
-    end_sleep = sleep_test_data['sleep'][0]['endTime']
-    start_sleep = sleep_test_data['sleep'][0]['startTime']
-    main_sleep = sleep_test_data['sleep'][0]['isMainSleep']
-    minutes_sleep = sleep_test_data['sleep'][0]['minutesAsleep']
-    minutes_awake = sleep_test_data['sleep'][0]['minutesAwake']
-    minutes_to_fall_alseep = sleep_test_data['sleep'][0]['minutesToFallAsleep']
-    time_in_bed = sleep_test_data['sleep'][0]['timeInBed']
-    # ---------------------------------------------------------------------
-
-    sleep_wakings_timeline = sleep_test_data['sleep'][0]['levels']['data']
-
-    #summary_wakings = sleep_test_data['sleep'][0]['levels']['summary']
-    # if more than 1 period of sleep, then hav multiple sleep records
-    # and the following summarizes all the sleep periods for that day
-    sleep_records_number_day = sleep_test_data['summary']['totalSleepRecords']
-    minutes_sleep_day = sleep_test_data['summary']['totalMinutesAsleep']
-    summary_stages_day = sleep_test_data['summary']['stages']
-    time_in_bed_day = sleep_test_data['summary']['totalTimeInBed']
-
-
-elif sleep_test_data['sleep'][0]['type'] == 'stages':
-    duration = sleep_test_data['sleep'][0]['duration']
-    efficiency = sleep_test_data['sleep'][0]['efficiency']
-    end_sleep = sleep_test_data['sleep'][0]['endTime']
-    start_sleep = sleep_test_data['sleep'][0]['startTime']
-    main_sleep = sleep_test_data['sleep'][0]['isMainSleep']
-    minutes_sleep = sleep_test_data['sleep'][0]['minutesAsleep']
-    minutes_awake = sleep_test_data['sleep'][0]['minutesAwake']
-    minutes_to_fall_alseep = sleep_test_data['sleep'][0]['minutesToFallAsleep']
-    time_in_bed = sleep_test_data['sleep'][0]['timeInBed']
-
-    sleep_wakings_timeline = sleep_test_data['sleep'][0]['levels']['shortData']
-    sleep_stages_timeline =  sleep_test_data['sleep'][0]['levels']['data']
-
-    summary_stages = sleep_test_data['sleep'][0]['levels']['summary']
-
-    # if more than 1 period of sleep, then hav multiple sleep records
-    # and the following summarizes all the sleep periods for that day
-    sleep_records_number_day = sleep_test_data['summary']['totalSleepRecords']
-    minutes_sleep_day = sleep_test_data['summary']['totalMinutesAsleep']
-    summary_stages_day = sleep_test_data['summary']['stages']
-    time_in_bed_day = sleep_test_data['summary']['totalTimeInBed']
 
 
 
