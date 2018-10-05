@@ -6,7 +6,8 @@ Created on Sat Dec 24 16:23:34 2016
 """
 
 
-cd \\chgoldfs\253Broadway\PrivateFiles\amartens\hr\hr_sleep_data\fitbit_data2
+#cd \\chgoldfs\253Broadway\PrivateFiles\amartens\hr\hr_sleep_data\fitbit_data2
+cd /Users/charlesmartens/Documents/projects/fitbit_data
 
 import numpy as np
 import pandas as pd
@@ -21,6 +22,7 @@ import statsmodels.formula.api as smf #with this 'formula' api, don't need to cr
 from statsmodels.formula.api import *
 from matplotlib.dates import DateFormatter
 import pickle
+from datetime import datetime, timedelta
 #from datetime import datetime
 #from datetime import timedelta
 #from scipy import fft, arange
@@ -387,28 +389,50 @@ len(df_sleep_8_to_11) / len(df_sleep)  # 98% of the file remains
 
 # give new date that relates to the day the sleep started. 
 # e.g., if tue is july 1, then that night is sleep associated with july 1
+# to do this, substract 12 hours from the date. so that 11:59am that morning
+# becomes 11:49pm of the prior day. and the earlist time, 20:00 (8pm) would
+# become 8am. so now that whole time frame is labeled as one date, teh date
+# when it started. and then just leave the date
 
+df_sleep_8_to_11['date_sleep'] = df_sleep_8_to_11['date_time'] - timedelta(hours=12)
+df_sleep_8_to_11['date_sleep'] = pd.to_datetime(df_sleep_8_to_11['date_sleep'].dt.date)
 df_sleep_8_to_11.head()
 
+df_sleep_8_to_11.groupby('date_sleep').size().hist(alpha=.6, bins=20)
+plt.grid(False)
+# delete dates of sleep where fewer than 400 rows (= 3.33 hours)
+df_sleep_data_per_day = df_sleep_8_to_11.groupby('date_sleep').size()
+df_sleep_data_per_day = df_sleep_data_per_day.sort_values()
+df_sleep_data_per_day = df_sleep_data_per_day[df_sleep_data_per_day<400]
+dates_with_little_data_list = list(df_sleep_data_per_day.index)
+len(df_sleep_8_to_11['date_sleep'].unique())
+df_sleep_8_to_11 = df_sleep_8_to_11[-df_sleep_8_to_11['date_sleep'].isin(dates_with_little_data_list)]
+len(df_sleep_8_to_11['date_sleep'].unique())
 
+len(df_sleep_8_to_11[df_sleep_8_to_11['hr'].isnull()]) / len(df_sleep_8_to_11)
+# still over 52%
 
+# next steps - look at notes on github jupyter nb
+# clean data - remove outliers and implausible values
+# put date_time as index and resample so in real time
+# including gaps? but will that give all date_times
+# for when i was awake during the day? what do i want here?
+# for computing things like mean hr and times awake, etc.
+# i don't need a real time series. it's ok if there are gaps
+# but then to viz the time series and aggregated times series
+# can i plot a ragged ts in relplot? maybe. play with. might
+# not need to resample but will prob need to put date_time as the index
 
-#df_hr_awake_6_to_8.groupby('date').size().hist(alpha=.6, bins=20)
-#plt.axvline(df_hr_awake_6_to_8.groupby('date').size().mean(), linestyle='--')
-#plt.grid(False)
-#df_datapionts_by_day = df_hr_awake_6_to_8.groupby('date').size().reset_index().rename(columns={0:'size'})
-#dates_to_keep_list = df_datapionts_by_day[df_datapionts_by_day['size']>200]['date'].values
-#df_hr_awake_6_to_8 = df_hr_awake_6_to_8[df_hr_awake_6_to_8['date'].isin(dates_to_keep_list)]
-#len(df_hr_awake_6_to_8['date'].unique())  # 708
-#len(dates_to_keep_list)
-#df_resting_hr_by_day = df_resting_hr_by_day[df_resting_hr_by_day['date'].isin(dates_to_keep_list)]
+# also, first come up with a plan for what i want to present
+# draw it out, on paper, with the grahps i want.
 
+df_sleep_8_to_11[df_sleep_8_to_11['date_sleep']=='2018-08-01']
+df_sleep_8_to_11[df_sleep_8_to_11['date_sleep']=='2018-08-02']
+df_sleep_8_to_11[df_sleep_8_to_11['date_sleep']=='2018-08-03']
+df_sleep_8_to_11[df_sleep_8_to_11['date_sleep']=='2018-08-04']
+# these match up with the online dashboard
 
-
-
-
-
-
+df_sleep_8_to_11[df_sleep_8_to_11['date_sleep']=='2018-08-01']
 
 
 

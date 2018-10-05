@@ -41,7 +41,7 @@ consumer_secret = '90a8354c89aa8b6344eb285c87f9e052'
 # plug them into the website to get a token. so will need to get a new token ea time i download new data
 #token = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0WU1WUDMiLCJhdWQiOiIyMjg2SFMiLCJpc3MiOiJGaXRiaXQiLCJ0eXAiOiJhY2Nlc3NfdG9rZW4iLCJzY29wZXMiOiJyc2V0IHJhY3QgcmxvYyByaHIgcnBybyByc2xlIiwiZXhwIjoxNTM4Nzc1NTg3LCJpYXQiOjE1MzgxNzA3ODd9.6CW8ZrF0ojxAQO-o-R3jyAnnHx0gHxEgAvr33g7RZCw'
 #token = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0WU1WUDMiLCJhdWQiOiIyMjg2SFMiLCJpc3MiOiJGaXRiaXQiLCJ0eXAiOiJhY2Nlc3NfdG9rZW4iLCJzY29wZXMiOiJyc29jIHJzZXQgcmFjdCBybG9jIHJ3ZWkgcmhyIHJudXQgcnBybyByc2xlIiwiZXhwIjoxNTM4Nzk0MDYyLCJpYXQiOjE1MzgxODkyNjJ9.If8hfgK1PRvLyN9XA75cmWcE59IjHNQ8kVeajUftetI'
-token = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0WU1WUDMiLCJhdWQiOiIyMjg2SFMiLCJpc3MiOiJGaXRiaXQiLCJ0eXAiOiJhY2Nlc3NfdG9rZW4iLCJzY29wZXMiOiJyc29jIHJzZXQgcmFjdCBybG9jIHJ3ZWkgcmhyIHJudXQgcnBybyByc2xlIiwiZXhwIjoxNTM4Nzk0MDYyLCJpYXQiOjE1MzgyMzU5ODB9.ediJh64xAR4ouymRLJEj5qQ6mRJhsxK5O6HZWeNOHeA'
+token = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0WU1WUDMiLCJhdWQiOiIyMjg2SFMiLCJpc3MiOiJGaXRiaXQiLCJ0eXAiOiJhY2Nlc3NfdG9rZW4iLCJzY29wZXMiOiJyc29jIHJzZXQgcmFjdCBybG9jIHJ3ZWkgcmhyIHJudXQgcnBybyByc2xlIiwiZXhwIjoxNTM4Nzk0MDYyLCJpYXQiOjE1MzgyNTE5MTJ9.Fjkul07xFarNcv7TCT-IqCnfr9S7L1Crh8q2FAMd_zo'
 
 client = fitbit.FitbitOauth2Client(consumer_key, consumer_secret)
 client.authorize_token_url(token)
@@ -131,6 +131,8 @@ def pickle_hr_continuous(authd_client, dates):
 #dates = pd.date_range('10/10/2016', '08/10/2017', freq='D')
 #dates = pd.date_range('06/13/2017', '08/10/2017', freq='D')
 #dates = pd.date_range('10/01/2016', '10/09/2016', freq='D')
+dates = pd.date_range('01/20/2018', '02/09/2018', freq='D')
+
 pickle_hr_continuous(authd_client, dates)
 
 dates = pd.date_range('08/11/2018', '09/25/2018', freq='D')
