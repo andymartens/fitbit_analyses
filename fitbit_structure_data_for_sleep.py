@@ -361,7 +361,7 @@ df_sleep['hr'] = df_sleep['date_time'].map(date_time_to_hr_dict)
 len(df_sleep[df_sleep['hr'].isnull()]) / len(df_sleep)
 # should be .50. so a few are missing and not sure why
 # try a ffill and see what's still null
-df_sleep['hr'].fillna(method='ffill', limit=1, inplace=True)
+#df_sleep['hr'].fillna(method='ffill', limit=1, inplace=True)
 df_sleep[df_sleep['hr'].isnull()]
 # 34370 rows empty still. what happened?
 df_missing_hr = df_sleep[df_sleep['hr'].isnull()]
@@ -411,6 +411,16 @@ len(df_sleep_8_to_11['date_sleep'].unique())
 
 len(df_sleep_8_to_11[df_sleep_8_to_11['hr'].isnull()]) / len(df_sleep_8_to_11)
 # still over 52%
+for date in df_sleep_8_to_11['date_sleep'].unique():
+    df_date = df_sleep_8_to_11[df_sleep_8_to_11['date_sleep']==date]
+    print(date, np.round(len(df_date[df_date['hr'].isnull()]) / len(df_date), 3))
+
+df_sleep_8_to_11[['date_time', 'date_sleep', 'hr']][df_sleep_8_to_11['date_sleep']=='2018-09-23'].tail(50)
+#df_sleep_8_to_11[df_sleep_8_to_11['date_sleep']=='2018-09-23'].tail(50)
+
+# what happens w these nulls?
+df_hr[(df_hr['date_time']>'2018-09-24 07:01:30') & (df_hr['date_time']<'2018-09-24 07:20:30')]
+# there's just nothing in the hr files for these times. just missing. ok.
 
 # next steps - look at notes on github jupyter nb
 # clean data - remove outliers and implausible values
@@ -432,13 +442,24 @@ df_sleep_8_to_11[df_sleep_8_to_11['date_sleep']=='2018-08-03']
 df_sleep_8_to_11[df_sleep_8_to_11['date_sleep']=='2018-08-04']
 # these match up with the online dashboard
 
-df_sleep_8_to_11[df_sleep_8_to_11['date_sleep']=='2018-08-01']
 
+# plot hr for one night
+# when do for a sinlge night, use plt.plot (see jupyter nb)
+# because that'll show breaks when no data. 
+# how to deal with 30-sec thing? vs. 1 min. some interpolation?
 
+# and when do relplot -- use that for aggregating. that doesn't
+# show any gaps
 
+# '2018-09-24'
+df_date = df_sleep_8_to_11[df_sleep_8_to_11['date_sleep']=='2018-09-23']
 
+sns.relplot(x='date_time', y='hr', data=df_date[df_date['awake']==0], kind='scatter')  # kind='line'
+plt.xlim('2018-09-24 07:00:30', '2018-09-24 07:30:30')
 
-
+sns.relplot(x='date_time', y='hr', data=df_date[(df_date['date_time']>'2018-09-24 07:01:30') & (df_date['date_time']<'2018-09-24 07:20:30')], kind='line')
+sns.relplot(x='date_time', y='hr', data=df_date[(df_date['date_time']>'2018-09-24 07:01:30') & (df_date['date_time']<'2018-09-24 07:20:30')])
+plt.xlim('2018-09-24 07:00:30', '2018-09-24 07:30:30')
 
 
 
