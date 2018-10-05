@@ -6,7 +6,7 @@ Created on Sat Dec 24 16:23:34 2016
 """
 
 
-cd /Users/charlesmartens/Documents/projects/fitbit_data
+cd \\chgoldfs\253Broadway\PrivateFiles\amartens\hr\hr_sleep_data\fitbit_data2
 
 import numpy as np
 import pandas as pd
@@ -15,7 +15,6 @@ import seaborn as sns
 import csv
 import sys, os
 from collections import deque
-import fitbit
 import configparser
 import copy
 import statsmodels.formula.api as smf #with this 'formula' api, don't need to create the design #matrices (does it automatically).
@@ -225,8 +224,7 @@ df_sleep[['date_time']].to_pickle('df_sleep_skeleton.pkl')
 
 # get df_awake 
 # get full df of 30-sec periods and delete df_sleep?
-# then map ont hr
-# then compute resting hr w 10-min moving avg.
+# then map on hr. then compute resting hr w 10-min moving avg.
 
 # map on hr to sleep
 # create sleep metrics? 
@@ -287,7 +285,6 @@ def produce_df_hr(dates):
     
 # get all dates:
 dates = pd.date_range('2016-10-01', '2018-09-25', freq='D')
-
 df_hr = produce_df_hr(dates)
 
 # save hr df
@@ -320,7 +317,6 @@ df_hr_sleep.shape  # (345425, 4)
 #df_hr_awake.to_pickle('df_hr_awake.pkl')
 #df_hr_sleep.to_pickle('df_hr_sleep.pkl')
 
-
 # distribution of times w hr
 sns.countplot(df_hr['date_time'].dt.hour, color='green', alpha=.4)
 plt.xlabel('Hour', fontsize=15)
@@ -346,6 +342,92 @@ plt.yticks(fontsize=10)
 sns.despine()
 
 
+
+# ------------------------------
+# sleep focus and hr while sleep
+df_hr_sleep.head()
+date_time_to_hr_dict = dict(zip(df_hr_sleep['date_time'], df_hr_sleep['hr']))
+
+
+df_sleep = pd.read_pickle('df_sleep.pkl')
+df_sleep.head()
+df_sleep.tail()
+# these are in 30-sec increments. df_hr_sleep in 1 min increments
+# could map on hr_sleep and interpolate or get mean hr of before and after
+
+df_sleep['hr'] = df_sleep['date_time'].map(date_time_to_hr_dict)
+len(df_sleep[df_sleep['hr'].isnull()]) / len(df_sleep)
+# should be .50. so a few are missing and not sure why
+# try a ffill and see what's still null
+df_sleep['hr'].fillna(method='ffill', limit=1, inplace=True)
+df_sleep[df_sleep['hr'].isnull()]
+# 34370 rows empty still. what happened?
+df_missing_hr = df_sleep[df_sleep['hr'].isnull()]
+df_missing_hr.head()
+df_missing_hr['date_time'].hist()
+df_missing_hr['hour'] = df_missing_hr['date_time'].dt.hour
+df_missing_hr['hour'].hist()
+
+df_missing_hr['deep'].value_counts(normalize=True)
+df_missing_hr['light'].value_counts(normalize=True)
+df_missing_hr['rem'].value_counts(normalize=True)
+df_missing_hr['restless'].value_counts(normalize=True)
+df_missing_hr['restless'].value_counts(normalize=True)
+df_missing_hr['awake'].value_counts(normalize=True)
+
+# are there days with tons of hr missing?
+# do i first want to just select 8pm to 11:59am. 
+# then label these chunks as a particular date.
+# then run stats again for missing and also see if
+# particular dates have tons of missing.
+df_sleep['hour'] = df_sleep['date_time'].dt.hour
+sleep_hours_list = [20,21,22,23,24,0,1,2,3,4,5,6,7,8,9,10,11]
+df_sleep_8_to_11 = df_sleep[df_sleep['hour'].isin(sleep_hours_list)]
+len(df_sleep_8_to_11) / len(df_sleep)  # 98% of the file remains
+
+# give new date that relates to the day the sleep started. 
+# e.g., if tue is july 1, then that night is sleep associated with july 1
+
+df_sleep_8_to_11.head()
+
+
+
+
+#df_hr_awake_6_to_8.groupby('date').size().hist(alpha=.6, bins=20)
+#plt.axvline(df_hr_awake_6_to_8.groupby('date').size().mean(), linestyle='--')
+#plt.grid(False)
+#df_datapionts_by_day = df_hr_awake_6_to_8.groupby('date').size().reset_index().rename(columns={0:'size'})
+#dates_to_keep_list = df_datapionts_by_day[df_datapionts_by_day['size']>200]['date'].values
+#df_hr_awake_6_to_8 = df_hr_awake_6_to_8[df_hr_awake_6_to_8['date'].isin(dates_to_keep_list)]
+#len(df_hr_awake_6_to_8['date'].unique())  # 708
+#len(dates_to_keep_list)
+#df_resting_hr_by_day = df_resting_hr_by_day[df_resting_hr_by_day['date'].isin(dates_to_keep_list)]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# -----------------------
 # plot hr by time of day
 
 # better to do with ts with cis. because boxplot has too many high outliers
