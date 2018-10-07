@@ -389,21 +389,18 @@ df_sleep['hour'] = df_sleep['date_time'].dt.hour
 # and then cut off starting at 8. or maybe don't need to 
 # cut off at 8? 
 
-sleep_hours_list = [20,21,22,23,24,0,1,2,3,4,5,6,7,8,9,10,11]
+sleep_hours_list = [18, 19, 20,21,22,23,24,0,1,2,3,4,5,6,7,8,9,10,11]
 df_sleep_8_to_11 = df_sleep[df_sleep['hour'].isin(sleep_hours_list)]
-len(df_sleep_8_to_11) / len(df_sleep)  # 98% of the file remains
+len(df_sleep_8_to_11) / len(df_sleep)  # 98.7% of the file remains
 
 # give new date that relates to the day the sleep started. 
 # e.g., if tue is july 1, then that night is sleep associated with july 1
-
-df_sleep_8_to_11.head()
-
 
 # give new date that relates to the day the sleep started. 
 # e.g., if tue is july 1, then that night is sleep associated with july 1
 # to do this, substract 12 hours from the date. so that 11:59am that morning
-# becomes 11:49pm of the prior day. and the earlist time, 20:00 (8pm) would
-# become 8am. so now that whole time frame is labeled as one date, teh date
+# becomes 11:49pm of the prior day. and the earlist time, 18:00 (6pm) would
+# become 6am. so now that whole time frame is labeled as one date, teh date
 # when it started. and then just leave the date
 
 df_sleep_8_to_11['date_sleep'] = df_sleep_8_to_11['date_time'] - timedelta(hours=12)
@@ -428,8 +425,8 @@ for date in df_sleep_8_to_11['date_sleep'].unique():
     print(date, np.round(len(df_date[df_date['hr'].isnull()]) / len(df_date), 3))
 
 df_sleep_8_to_11[['date_time', 'date_sleep', 'hr']][df_sleep_8_to_11['date_sleep']=='2018-09-23'].tail(50)
-#df_sleep_8_to_11[df_sleep_8_to_11['date_sleep']=='2018-09-23'].tail(50)
 
+df_sleep_8_to_11[df_sleep_8_to_11['date_sleep']=='2018-09-23'].tail(50)
 # what happens w these nulls?
 df_hr[(df_hr['date_time']>'2018-09-24 07:01:30') & (df_hr['date_time']<'2018-09-24 07:20:30')]
 # there's just nothing in the hr files for these times. just missing. ok.
@@ -478,6 +475,9 @@ for date in df_sleep_8_to_11['date_sleep'].unique()[110:150]:
 # I don't want to count time between sleep sessions as a sleep session)
 df_sleep_8_to_11.head()
 df_sleep_8_to_11['sleep_session'] = df_sleep_8_to_11.groupby('date_sleep')['start_sleep'].transform(lambda x: x.expanding().sum())
+df_sleep_8_to_11[df_sleep_8_to_11['sleep_session'].isnull()]
+df_sleep_8_to_11[df_sleep_8_to_11['sleep_session'].isnull()]['date_sleep'].unique()
+
 date = '2017-02-17'
 df_date = df_sleep_8_to_11[df_sleep_8_to_11['date_sleep']==date]
 df_date = df_date.reset_index(drop=True)
@@ -486,13 +486,15 @@ df_date[(df_date.index>140) & (df_date.index<150)]
 df_date[(df_date['date_time']>'2017-02-17 20:06:00') & (df_date['date_time']<'2017-02-17 20:11:00')]
 df_date[(df_date['date_time']>'2017-02-17 22:50:30') & (df_date['date_time']<'2017-02-17 23:05:30')]
 
-df_sleep_8_to_11[df_sleep_8_to_11['sleep_session'].isnull()]['date_sleep'].value_counts()
+#df_sleep_8_to_11[df_sleep_8_to_11['sleep_session'].isnull()]['date_sleep'].value_counts()
 # why don't i have sleep sessions for all?
 for date in df_sleep_8_to_11['date_sleep'].unique():
     #print(date)
     df_date = df_sleep_8_to_11[df_sleep_8_to_11['date_sleep']==date]
-    sum_start_sleeps = df_date['start_sleep'].sum()
-    if sum_start_sleeps >= 1:
+    df_date = df_date.reset_index()
+    first_row_start_sleep = df_date['start_sleep'][:1].values[0]
+    #sum_start_sleeps = df_date['start_sleep'].sum()
+    if first_row_start_sleep == 1:
         None
     else:
         print(date)
@@ -517,9 +519,17 @@ first_index_each_date_sleep['start_sleep'] = 1
 index_to_start_sleep_flag_dict = dict(zip(first_index_each_date_sleep['index'], first_index_each_date_sleep['start_sleep']))
 df_sleep_8_to_11['index_copy'] = df_sleep_8_to_11.index
 df_sleep_8_to_11['start_of_date_sleep'] = df_sleep_8_to_11['index_copy'].map(index_to_start_sleep_flag_dict)
+df_sleep_8_to_11.loc[(df_sleep_8_to_11['start_of_date_sleep']==1) & (df_sleep_8_to_11['start_sleep'].isnull())] 
+
+df_sleep_8_to_11['start_sleep_occurs_before'] = 0
+df_sleep_8_to_11.loc[(df_sleep_8_to_11['start_of_date_sleep']==1) & (df_sleep_8_to_11['start_sleep'].isnull()), 'start_sleep_occurs_before'] = 1 
+
+
+# how many don't have a start_sleep flag at first row
 df_sleep_8_to_11.loc[df_sleep_8_to_11['start_of_date_sleep']==1, 'start_sleep'] = 1
 # now compute sleep_session again
 df_sleep_8_to_11['sleep_session'] = df_sleep_8_to_11.groupby('date_sleep')['start_sleep'].transform(lambda x: x.expanding().sum())
+df_sleep_8_to_11[df_sleep_8_to_11['sleep_session'].isnull()]
 # great
 
 # now interpolate within sleep session
@@ -527,7 +537,13 @@ df_sleep_8_to_11['hr_interpolate'] = df_sleep_8_to_11.groupby(['date_sleep', 'sl
 df_sleep_8_to_11.columns
 df_sleep_8_to_11[['date_sleep', 'date_time', 'hr', 'hr_interpolate']]
 
-
+# compute rolling mean here or after resampling? pretty sure that resampling
+# won't change the number of rows per session (might be code belor or above
+# that checks that assumption). but go w this assumption for now.
+df_sleep_8_to_11['hr_rolling_30_min'] = df_sleep_8_to_11.groupby(['date_sleep', 
+                'sleep_session'])['hr_interpolate'].transform(lambda x: x.rolling(window=30, min_periods=10, center=True).mean())
+df_sleep_8_to_11.tail(40)
+df_sleep_8_to_11.head(40)
 
 # -------------
 # -------------
@@ -536,12 +552,28 @@ df_sleep_8_to_11[['date_sleep', 'date_time', 'hr', 'hr_interpolate']]
 # -------------
 
 
+# when does fitbit consider it a new sleep session?
+df_sleep_8_to_11 = df_sleep_8_to_11.sort_values(by='date_time')
+df_sleep_8_to_11['date_time_prior'] = df_sleep_8_to_11.groupby('date_sleep')['date_time'].transform(lambda x: x.shift(1))
+df_sleep_8_to_11['time_since_prior_row'] = (df_sleep_8_to_11['date_time'] - df_sleep_8_to_11['date_time_prior']) / np.timedelta64(1, 'm') 
+df_sleep_8_to_11[df_sleep_8_to_11['start_sleep']==1]['time_since_prior_row'].hist(alpha=.5)
+plt.grid(False)
+
+df_sleep_8_to_11[df_sleep_8_to_11['start_sleep']==1]['time_since_prior_row'].min()
+df_sleep_8_to_11[df_sleep_8_to_11['start_sleep']==1]['time_since_prior_row'].max()
+# looks like anything >= 1hr is considered another sleep session by fitbit
+
+time_since_prior_sleep_list = df_sleep_8_to_11[df_sleep_8_to_11['start_sleep']==1]['time_since_prior_row'].values
+np.sort(time_since_prior_sleep_list)
+
+df_sleep_sessions = df_sleep_8_to_11.groupby('date_sleep')['sleep_session'].mean()
+len(df_sleep_sessions[df_sleep_sessions>1])
+# 41 days have 2+ sleep sessions
 
 # could derive my own sleep sessions from a break in time series of more than x
 # so not relying on fitbit's definition of sleep session. but hold of on that for the moment
 # but would be good to do that or else test fitbit's assumptions about what constitutes
 # a sleep session
-
 
 # on nights when have more than one sleep episode, resampling will
 # increase the number of rows because it fills in the gaps between
