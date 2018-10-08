@@ -459,6 +459,10 @@ df_sleep_8_to_11.loc[df_sleep_8_to_11['awake']==1, 'hr'] = np.nan
 
 # how to reample w 30 sec. do i have to do this? this might be unnecessary
 # check to see if anything is different when resample within date
+# looks like i don't need to resample -- that the sleep sessions all
+# have complete set of rows 30 sec apart. can see here that the only
+# days with a diff number of rows when resampled are those with multiple
+# sleep sessions because the resampling fills in gaps between sleep sessions
 for date in df_sleep_8_to_11['date_sleep'].unique()[110:150]:
     print(date)
     df_date = df_sleep_8_to_11[df_sleep_8_to_11['date_sleep']==date]
@@ -473,10 +477,10 @@ for date in df_sleep_8_to_11['date_sleep'].unique()[110:150]:
 # i.e., if 2+ sleep sessions per one date_sleep, then interpolate within each session
 # (do this before resampling. because i'll groupby date_sleep and sleep session, 
 # I don't want to count time between sleep sessions as a sleep session)
-df_sleep_8_to_11.head()
-df_sleep_8_to_11['sleep_session'] = df_sleep_8_to_11.groupby('date_sleep')['start_sleep'].transform(lambda x: x.expanding().sum())
-df_sleep_8_to_11[df_sleep_8_to_11['sleep_session'].isnull()]
-df_sleep_8_to_11[df_sleep_8_to_11['sleep_session'].isnull()]['date_sleep'].unique()
+#df_sleep_8_to_11.head()
+#df_sleep_8_to_11['sleep_session'] = df_sleep_8_to_11.groupby('date_sleep')['start_sleep'].transform(lambda x: x.expanding().sum())
+#df_sleep_8_to_11[df_sleep_8_to_11['sleep_session'].isnull()]
+#df_sleep_8_to_11[df_sleep_8_to_11['sleep_session'].isnull()]['date_sleep'].unique()
 
 date = '2017-02-17'
 df_date = df_sleep_8_to_11[df_sleep_8_to_11['date_sleep']==date]
@@ -500,14 +504,14 @@ for date in df_sleep_8_to_11['date_sleep'].unique():
         print(date)
 
 # no start_sleep: 2017-11-26T00:00:00.000000000
-date = '2018-09-07'  # '2017-10-29'  #'2017-01-28'
+date = '2018-08-26'   # '2017-10-29'  #'2017-01-28'
 df_date = df_sleep_8_to_11[df_sleep_8_to_11['date_sleep']==date]
 df_date = df_date.reset_index(drop=True)
 df_date[df_date['start_sleep']==1]
 # start date doesn't come until index 174. why is that?
 # and all of these seem to start at 8pm and don't have any
 # flags for types of sleep until the start sleep point
-df_date[115:130]
+# df_date[115:130]
 # ah, is it possible that these are days i was sleeping
 # before my 8pm artificial start. and so the fitbit start time
 # was before 8pm. and so i don't have that here
@@ -524,7 +528,6 @@ df_sleep_8_to_11.loc[(df_sleep_8_to_11['start_of_date_sleep']==1) & (df_sleep_8_
 df_sleep_8_to_11['start_sleep_occurs_before'] = 0
 df_sleep_8_to_11.loc[(df_sleep_8_to_11['start_of_date_sleep']==1) & (df_sleep_8_to_11['start_sleep'].isnull()), 'start_sleep_occurs_before'] = 1 
 
-
 # how many don't have a start_sleep flag at first row
 df_sleep_8_to_11.loc[df_sleep_8_to_11['start_of_date_sleep']==1, 'start_sleep'] = 1
 # now compute sleep_session again
@@ -532,25 +535,35 @@ df_sleep_8_to_11['sleep_session'] = df_sleep_8_to_11.groupby('date_sleep')['star
 df_sleep_8_to_11[df_sleep_8_to_11['sleep_session'].isnull()]
 # great
 
-# now interpolate within sleep session
-df_sleep_8_to_11['hr_interpolate'] = df_sleep_8_to_11.groupby(['date_sleep', 'sleep_session'])['hr'].transform(lambda x: x.interpolate(limit=1))
-df_sleep_8_to_11.columns
-df_sleep_8_to_11[['date_sleep', 'date_time', 'hr', 'hr_interpolate']]
+# set hr_interpolate to hr so can use code below
+#df_sleep_8_to_11['hr_interpolate'] = df_sleep_8_to_11['hr']
+# ==========================
+# hold off on interpoliation until later, after take out outliers
+#df_sleep_8_to_11['hr_interpolate'] = df_sleep_8_to_11.groupby(['date_sleep', 'sleep_session'])['hr'].transform(lambda x: x.interpolate(limit=1))
+#df_sleep_8_to_11.columns
+#df_sleep_8_to_11[['date_sleep', 'date_time', 'hr', 'hr_interpolate']]
+# ==========================
 
 # compute rolling mean here or after resampling? pretty sure that resampling
-# won't change the number of rows per session (might be code belor or above
+# won't change the number of rows per session (might be code below or above
 # that checks that assumption). but go w this assumption for now.
+df_sleep_8_to_11 = df_sleep_8_to_11.sort_values(by=['date_time'])
 df_sleep_8_to_11['hr_rolling_30_min'] = df_sleep_8_to_11.groupby(['date_sleep', 
-                'sleep_session'])['hr_interpolate'].transform(lambda x: x.rolling(window=30, min_periods=10, center=True).mean())
+                'sleep_session'])['hr'].transform(lambda x: x.rolling(window=30, min_periods=3, center=True).mean())
 df_sleep_8_to_11.tail(40)
 df_sleep_8_to_11.head(40)
 
-# -------------
-# -------------
-# LEFT OFF HERE
-# -------------
-# -------------
+# with min_periods set to 5, this will give lots of rows data where there is
+# not in actuality. so after creating this rolling avg, delete time points 
+# where don't have any actual interpolated hr data
 
+# ==========================
+# do this later after calc interpolate
+#df_sleep_8_to_11.loc[df_sleep_8_to_11['hr_interpolate'].isnull(), 'hr_rolling_30_min'] = np.nan
+# ==========================
+
+# doing rolling mean on df ragged ts doesn't work for me here becuase
+# can't center it on a time window. 
 
 # when does fitbit consider it a new sleep session?
 df_sleep_8_to_11 = df_sleep_8_to_11.sort_values(by='date_time')
@@ -583,13 +596,65 @@ len(df_sleep_sessions[df_sleep_sessions>1])
 # a straight line through those missing times in which i was awake
 # so, sure, resample within date_sleep. 
 date = '2017-02-17'
+date = '2017-11-09'
 df_date = df_sleep_8_to_11[df_sleep_8_to_11['date_sleep']==date]
 len(df_date)
 len(df_date.resample('30S', on='date_time').mean())
+df_date['sleep_session'].unique()
 
-len(df_sleep_8_to_11.groupby('date_sleep').resample('30S', on='date_time').mean())  # 721306
-len(df_sleep_8_to_11)  # 711781
 
+## ========================
+## resample later
+#len(df_sleep_8_to_11.groupby('date_sleep').resample('30S', on='date_time').mean())  # 727693
+#len(df_sleep_8_to_11)  # 713593
+#df_sleep_8_to_11_resampled = df_sleep_8_to_11.groupby('date_sleep').resample('30S', on='date_time').mean().reset_index()
+## this resampled within date_sleep
+#df_sleep_8_to_11_resampled.head()
+#len(df_sleep_8_to_11_resampled)
+#df_date = df_sleep_8_to_11_resampled[df_sleep_8_to_11_resampled['date_sleep']==date]
+#len(df_date)  # all works
+## =========================
+
+# plot raw against smooth and take smoothed when outliers
+# get diff between smoothed and actual hr
+df_sleep_8_to_11['hr_vs_smoothed_diff'] = df_sleep_8_to_11['hr'] - df_sleep_8_to_11['hr_rolling_30_min']
+
+df_sleep_8_to_11['hr_vs_smoothed_diff'].hist(alpha=.5, bins=50)
+plt.grid(False)
+
+df_sleep_8_to_11[df_sleep_8_to_11['hr_vs_smoothed_diff']>0]['hr_vs_smoothed_diff'].hist(alpha=.5, bins=50)
+pos_diff_mean = df_sleep_8_to_11[df_sleep_8_to_11['hr_vs_smoothed_diff']>0]['hr_vs_smoothed_diff'].mean() 
+pos_diff_sd = df_sleep_8_to_11[df_sleep_8_to_11['hr_vs_smoothed_diff']>0]['hr_vs_smoothed_diff'].std()
+x_sd_above_mean = pos_diff_mean + pos_diff_sd*3
+
+df_sleep_8_to_11[df_sleep_8_to_11['hr_vs_smoothed_diff']<0]['hr_vs_smoothed_diff'].hist(alpha=.5, bins=50)
+neg_diff_mean = df_sleep_8_to_11[df_sleep_8_to_11['hr_vs_smoothed_diff']<0]['hr_vs_smoothed_diff'].mean() 
+neg_diff_sd = df_sleep_8_to_11[df_sleep_8_to_11['hr_vs_smoothed_diff']<0]['hr_vs_smoothed_diff'].std()
+x_sd_below_mean = neg_diff_mean - neg_diff_sd*3
+
+# replace outliers with smoothed value
+df_sleep_8_to_11['outlier_hr'] = 0
+df_sleep_8_to_11.loc[(df_sleep_8_to_11['hr_vs_smoothed_diff'] > x_sd_above_mean) |
+        (df_sleep_8_to_11['hr_vs_smoothed_diff'] < x_sd_below_mean) , 
+        'outlier_hr'] = 1  
+df_sleep_8_to_11['outlier_hr'].value_counts(normalize=True)  # .7%
+df_sleep_8_to_11['hr_clean'] = df_sleep_8_to_11['hr']
+df_sleep_8_to_11.loc[df_sleep_8_to_11['outlier_hr']==1, 'hr_clean'] = df_sleep_8_to_11['hr_rolling_30_min']
+df_sleep_8_to_11[['hr', 'hr_clean']]
+#df_sleep_8_to_11_resampled['hr_clean'] = df_sleep_8_to_11_resampled['hr']
+#df_sleep_8_to_11_resampled.loc[df_sleep_8_to_11_resampled['outlier_hr']==1, 'hr_clean'] = df_sleep_8_to_11_resampled['hr_rolling_30_min']
+
+
+# do iterpolation here
+# this first line, when change code to hr above, just interpoliate hr here
+df_sleep_8_to_11['hr_interpolate'] = df_sleep_8_to_11.groupby(['date_sleep', 'sleep_session'])['hr'].transform(lambda x: x.interpolate(limit=1))
+df_sleep_8_to_11['hr_interpolate_clean'] = df_sleep_8_to_11.groupby(['date_sleep', 'sleep_session'])['hr_clean'].transform(lambda x: x.interpolate(limit=1))
+# think having troupbe because this is resampled
+
+df_sleep_8_to_11[['date_sleep', 'date_time', 'hr', 'hr_interpolate_clean']]
+df_sleep_8_to_11.loc[df_sleep_8_to_11['hr_interpolate'].isnull(), 'hr_rolling_30_min'] = np.nan
+
+# resample here?
 df_sleep_8_to_11_resampled = df_sleep_8_to_11.groupby('date_sleep').resample('30S', on='date_time').mean().reset_index()
 # this resampled within date_sleep
 df_sleep_8_to_11_resampled.head()
@@ -597,10 +662,66 @@ len(df_sleep_8_to_11_resampled)
 df_date = df_sleep_8_to_11_resampled[df_sleep_8_to_11_resampled['date_sleep']==date]
 len(df_date)  # all works
 
+# plot rolling vs raw on a day
+hr_variable = 'hr_interpolate'  # 'hr_interpolate_clean'
+hr_variable = 'hr_interpolate_clean'  # 'hr_interpolate'
+dates_list = df_sleep_8_to_11_resampled['date_sleep'].unique()
+date = dates_list[600]
+date = '2017-5-26'
+date = '2018-09-04'
+date = '2018-07-18'
+date = '2017-05-07'
+#date = '2016-10-27'  # can see the low outlier
+df_day = df_sleep_8_to_11_resampled[df_sleep_8_to_11_resampled['date_sleep']==date]
+plt.plot(df_day['date_time'], df_day[hr_variable], 
+         alpha=.4, color='green', linewidth=1)
+plt.plot(df_day['date_time'], df_day['hr_rolling_30_min'], 
+         alpha=.5, color='grey', linewidth=3)  
+plt.grid(axis='y', alpha=.4)
+plt.ylim(44,65)
 
-# create smoothed but within date_sleeps
-df_sleep_8_to_11_resampled.groupby('date_time')
-# plot raw against smooth and take smoothed when outliers
+df_sleep_8_to_11_resampled[df_sleep_8_to_11_resampled['hr_interpolate']<40]['date_sleep'].unique()
+df_sleep_8_to_11_resampled[df_sleep_8_to_11_resampled['hr_interpolate_clean']<40]
+
+# LEFT OFF
+
+
+
+
+
+
+
+
+
+# this isn't quite working. seems what i should be considering is if my hr 
+# is just too low. I know my hr shouldn't be 40, unless it's really consistently that way
+
+## really i want the distrib of those that are below the mean. what's that sd
+#df_hr_awake_6_to_8.loc[df_hr_awake_6_to_8['hr_vs_smoothed_diff']>0, 'hr_vs_smoothed_diff'] = np.nan 
+#
+#df_hr_awake_6_to_8['hr_vs_smoothed_diff'].hist(alpha=.5, bins=50)
+#plt.grid(False)
+#
+#df_hr_awake_6_to_8['hr_vs_smoothed_diff'].mean()
+
+
+
+
+
+
+# ===================
+# ===================
+# LEFT OFF
+# ===================
+# ===================
+
+
+
+
+
+
+
+
 
 # plot hr for one night
 # when do for a sinlge night, use plt.plot (see jupyter nb)
@@ -676,9 +797,7 @@ plt.plot(df_date.index, df_date['hr'],
 # test all this on a small amunt of data. 
 # and also, only use data that i'm alseep for. i.e., make times where i'm 
 # awake here = nan
-df_sleep_8_to_11['hr_rolling_30_min'] = df_sleep_8_to_11.groupby('date_sleep')['hr'].transform(lambda x: x.rolling(window=30, min_periods=10, center=True).mean())
-#df_sleep_8_to_11['hr_rolling_30_min'] = df_sleep_8_to_11['hr'].rolling(window=30, min_periods=10, center=True).mean()
-
+d
 
 
 
