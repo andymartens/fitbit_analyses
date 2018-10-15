@@ -344,7 +344,7 @@ plt.yticks(fontsize=10)
 sns.despine()
 
 # distribution of times awake w hr
-sns.countplot(df_hr_sleep['date_time'].dt.hour, color='dodgerblue', alpha=.5)
+sns.countplot(df_hr_sleep['date_time'].dt.hour, color='orange', alpha=.5)
 plt.xlabel('Hour', fontsize=18)
 plt.ylabel('Count', fontsize=18)
 plt.xticks(fontsize=11)
@@ -365,6 +365,114 @@ df_sleep.tail()
 # these are in 30-sec increments. df_hr_sleep in 1 min increments
 # could map on hr_sleep and interpolate or get mean hr of before and after
 
+# give new date that relates to the day the sleep started. 
+# e.g., if tue is july 1, then that night is sleep associated with july 1
+# to do this, substract 12 hours from the date. so that 11:59am that morning
+# becomes 11:49pm of the prior day. and the earlist time, 18:00 (6pm) would
+# become 6am. so now that whole time frame is labeled as one date, teh date
+# when it started. and then just leave the date
+df_sleep['date_sleep'] = df_sleep['date_time'] - timedelta(hours=12)
+df_sleep['date_sleep'] = pd.to_datetime(df_sleep['date_sleep'].dt.date)
+df_sleep.head()
+
+
+# ----------------------------------------
+# get alc rating days in here and truncate
+
+# import daily ratings
+# get daily questions -
+df_daily_qs_early = pd.read_excel('Mood Measure (Responses).xlsx')
+df_daily_qs_early.head()
+
+df_daily_qs_early = df_daily_qs_early[df_daily_qs_early['What are your initials']=='AM']
+df_daily_qs_early['date'] = pd.to_datetime(df_daily_qs_early['Timestamp'].dt.year.astype(str) + '-' + df_daily_qs_early['Timestamp'].dt.month.astype(str) + '-' + df_daily_qs_early['Timestamp'].dt.day.astype(str))
+df_daily_qs_early['date_short'] = df_daily_qs_early['date'].dt.date
+df_daily_qs_early.head()
+
+# qs to use and merge with current qs?
+df_daily_qs_early.dtypes
+df_daily_qs_early = df_daily_qs_early[['date', 'Today, are you tired?', 'Last night, did you sleep well?']]
+df_daily_qs_early['energy'] = 5 - df_daily_qs_early['Today, are you tired?']
+df_daily_qs_early.rename(columns={'Last night, did you sleep well?':'sleep'}, inplace=True)
+df_daily_qs_early = df_daily_qs_early[['date', 'energy', 'sleep']]
+
+
+df_daily_qs_current = pd.read_excel('Daily_Measure_2018_10_8.xlsx')
+#df_daily_qs_current = pd.read_csv('Daily_Measure_from_2_26_17.csv')
+df_daily_qs_current.head()
+df_daily_qs_current.tail()
+
+df_daily_qs_current['Timestamp'] = pd.to_datetime(df_daily_qs_current['Timestamp'])
+df_daily_qs_current['year'] = df_daily_qs_current['Timestamp'].dt.year.astype(str).str.split('.').str[0]
+df_daily_qs_current['month'] = df_daily_qs_current['Timestamp'].dt.month.astype(str).str.split('.').str[0]
+df_daily_qs_current['day'] = df_daily_qs_current['Timestamp'].dt.day.astype(str).str.split('.').str[0]
+df_daily_qs_current['date'] = df_daily_qs_current['year'] + '-' + df_daily_qs_current['month'] + '-' + df_daily_qs_current['day']
+df_daily_qs_current['date'].replace('nan-nan-nan', np.nan, inplace=True)
+df_daily_qs_current['date'] = pd.to_datetime(df_daily_qs_current['date'])
+df_daily_qs_current.columns
+
+df_daily_qs_current = df_daily_qs_current[['date', 'Right now I feel energetic.',
+       'At some point today I felt annoyed.', 'At some point today I had fun with someone.',
+       'Last night, I woke up from a restorative sleep.', 'Last night I had ____ alcoholic drinks',
+       'The alcohol I drank last night was ____', 'Notes', 'Right now I feel tired.', 
+       'At some point today I felt insulted.']]
+
+df_daily_qs_current.columns
+df_daily_qs_current.columns = ['date', 'energy', 'annoyed', 'fun', 'sleep', 'alcohol', 'alcohol_type', 'notes', 'tired', 'insulted']
+
+for col in df_daily_qs_current.columns:
+    print(col, len(df_daily_qs_current[df_daily_qs_current[col].isnull()]))
+
+for col in df_daily_qs_current.columns:
+    print(col, len(df_daily_qs_current[df_daily_qs_current[col].notnull()]))
+# given that i have annoyed and energy for just about all rows, i can delete tired and insulted
+df_daily_qs_current = df_daily_qs_current[['date', 'energy', 'annoyed', 'fun', 
+                                           'sleep', 'alcohol', 'alcohol_type',
+                                           'notes']]
+
+df_daily_qs_current['alcohol']
+df_daily_qs_current[df_daily_qs_current['alcohol'].notnull()]
+
+df_daily_qs = pd.concat([df_daily_qs_early, df_daily_qs_current], ignore_index=True)
+df_daily_qs.head(20)
+
+# 6 duplicate dates
+len(df_daily_qs['date'].unique())
+len(df_daily_qs)
+
+dates_duplicated_list = df_daily_qs[df_daily_qs['date'].duplicated()]['date'].values
+df_daily_qs[df_daily_qs['date'].isin(dates_duplicated_list)]
+df_daily_qs = df_daily_qs.drop_duplicates(subset='date', keep='last')
+df_daily_qs.tail()
+
+# the alcohol from the date on df_daily_qs refers to previous date
+df_daily_qs['date_prior'] = df_daily_qs['date'] - timedelta(days=1)
+df_daily_qs['date_two_prior'] = df_daily_qs['date'] - timedelta(days=2)
+df_daily_qs[['date_prior', 'date_two_prior', 'date']]
+
+date_to_alcohol_dict = dict(zip(df_daily_qs['date_prior'], df_daily_qs['alcohol']))
+df_sleep['alcohol'] = df_sleep['date_sleep'].map(date_to_alcohol_dict)
+len(df_sleep)  # 725079
+len(df_sleep['date_sleep'].unique())  # 708
+
+# truncate so only alcohol days
+df_sleep = df_sleep[df_sleep['alcohol'].notnull()]
+len(df_sleep)  # 486332
+len(df_sleep['date_sleep'].unique())  # 480 nights of sleep to anys for alcohol presentation
+
+# vietnam dates
+len(df_sleep['date_sleep'].unique())  # 480
+dates_vietnam_list = pd.date_range('2016-11-02', '2016-11-12')
+df_sleep = df_sleep[-df_sleep['date_sleep'].isin(dates_vietnam_list)]
+len(df_sleep['date_sleep'].unique())  # 480
+
+# remove vietnam dates - nov 3-12
+#len(df_sleep_8_to_11_resampled['date_sleep'].unique())  # 699
+#dates_vietnam_list = pd.date_range('2016-11-02', '2016-11-12')
+#df_sleep_8_to_11_resampled = df_sleep_8_to_11_resampled[-df_sleep_8_to_11_resampled['date_sleep'].isin(dates_vietnam_list)]
+#len(df_sleep_8_to_11_resampled['date_sleep'].unique())  # 697
+
+
 # plot again but plot the data from the sleep api
 plt.figure(figsize=(14, 6), dpi=80)
 sns.countplot(df_sleep['date_time'].dt.hour, color='dodgerblue', alpha=.5)
@@ -377,9 +485,8 @@ sns.despine()
 df_sleep.head()
 df_sleep_min = df_sleep[df_sleep['date_time'].astype(str).str[-2:-1]=='0']
 len(df_sleep)
-len(df_sleep_min['date'].unique())
-df_sleep_min['date'] = df_sleep_min['date_time'].dt.date
-df_sleep_by_day = df_sleep_min.groupby('date').size()/60
+len(df_sleep_min['date_sleep'].unique())
+df_sleep_by_day = df_sleep_min.groupby('date_sleep').size()/60
 df_sleep_by_day.mean()  # 8.439036 -- can't be???
 df_sleep_min.head()
 1 - len(df_sleep_min[df_sleep_min['hr'].isnull()]) / len(df_sleep_min)
@@ -418,23 +525,12 @@ df_sleep['hour'] = df_sleep['date_time'].dt.hour
 np.sort(df_sleep['hour'].unique())
 sleep_hours_list = [18,19,20,21,22,23,24,0,1,2,3,4,5,6,7,8,9,10,11]
 df_sleep_8_to_11 = df_sleep[df_sleep['hour'].isin(sleep_hours_list)]
-len(df_sleep_8_to_11) / len(df_sleep)  # 98.7% of the file remains
+len(df_sleep_8_to_11) / len(df_sleep)  # 99.2% of the file remains
 np.sort(df_sleep_8_to_11['hour'].unique())
 
 
 # give new date that relates to the day the sleep started. 
 # e.g., if tue is july 1, then that night is sleep associated with july 1
-
-# give new date that relates to the day the sleep started. 
-# e.g., if tue is july 1, then that night is sleep associated with july 1
-# to do this, substract 12 hours from the date. so that 11:59am that morning
-# becomes 11:49pm of the prior day. and the earlist time, 18:00 (6pm) would
-# become 6am. so now that whole time frame is labeled as one date, teh date
-# when it started. and then just leave the date
-
-df_sleep_8_to_11['date_sleep'] = df_sleep_8_to_11['date_time'] - timedelta(hours=12)
-df_sleep_8_to_11['date_sleep'] = pd.to_datetime(df_sleep_8_to_11['date_sleep'].dt.date)
-df_sleep_8_to_11.head()
 
 df_sleep_8_to_11.groupby('date_sleep').size().hist(alpha=.6, bins=20)
 plt.grid(False)
@@ -506,7 +602,6 @@ for date in df_sleep_8_to_11['date_sleep'].unique()[110:150]:
     print(len(df_date))
     print(len(df_date.resample('30S', on='date_time').mean()))
     print()
-
 
 # interpolate w limit of 1 within date_sleep, which fills in gaps where just one gap 
 # actually, should be interpolating within sleep session, not date_sleep
@@ -584,19 +679,21 @@ df_sleep_8_to_11[df_sleep_8_to_11['sleep_session'].isnull()]
 # to compute missing hr data and avg sleep length
 df_sleep_min = df_sleep_8_to_11[df_sleep_8_to_11['date_time'].astype(str).str[-2:-1]=='0']
 df_sleep_min = df_sleep_min[df_sleep_min['awake']==0]
-len(df_sleep_min)  # 329076
-1 - (len(df_sleep_min[df_sleep_min['hr'].isnull()]) / len(df_sleep_min))  # 329076
+df_sleep_min[df_sleep_min['awake'].isnull()]
+len(df_sleep_min)  # 215818
+1 - (len(df_sleep_min[df_sleep_min['hr'].isnull()]) / len(df_sleep_min))  # 0.96
 
-df_hr_missing_by_day = df_sleep_min.groupby('date_sleep')['hr'].apply(lambda x: len(x[x.isnull()])) / df_sleep_min.groupby('date_sleep')['hr'].size() 
+df_hr_missing_by_day = df_sleep_min.groupby('date_sleep')['hr'].apply(lambda x: len(x[x.isnull()])) / df_sleep_min.groupby('date_sleep')['hr'].size() * 100
 # take out bad day here -- almost all missing
 df_hr_missing_by_day.max()
 df_hr_missing_by_day[df_hr_missing_by_day==1]
 df_sleep_8_to_11[df_sleep_8_to_11['date_sleep']=='2017-09-01']
 
-#df_hr_missing_by_day = df_hr_missing_by_day[df_hr_missing_by_day<.7]
+df_hr_missing_by_day = df_hr_missing_by_day[df_hr_missing_by_day<70]
 
-df_hr_missing_by_day.hist(bins=15, color='dodgerblue', alpha=.5)
-plt.xlabel('Proportion of Sleep Minutes With Missing HR', fontsize=20)
+df_hr_missing_by_day = df_hr_missing_by_day.round(1)
+df_hr_missing_by_day.hist(bins=12, color='dodgerblue', alpha=.5)
+plt.xlabel('Percent of Sleep Minutes With Missing HR', fontsize=20)
 plt.ylabel('Number of Nights', fontsize=20)
 plt.xticks(fontsize=15)
 plt.yticks(fontsize=15)
@@ -608,6 +705,9 @@ sns.despine()
 # RE DO THIS WHEN USING DATA JUST FROM DAYS I HAVE ALC READINGS
 # NOT SURE WHY I DON'T HAVE DATA HERE? EXPLORE.
 
+# I SHOULD PROB LOOK AT RESTLESS OVER TIME. POSSIBLE THAT THIS NOW GETS
+# CODED AS AWAKE VS IN EARLY DATA AS RESTLESS?
+plt.plot(df_sleep_min.groupby('date_sleep')['restless'].mean())
 
 df_for_sleep_stats = df_sleep_min.groupby('date_sleep').size()
 df_for_sleep_stats.mean() / 60
@@ -628,6 +728,13 @@ plt.axvline(df_for_sleep_stats.mean(), linestyle='--', color='grey')
 plt.grid(False)
 sns.despine()
 
+# over time?
+#df_for_sleep_stats.head()
+#df_for_sleep_stats = df_for_sleep_stats.reset_index()
+#df_for_sleep_stats.rename(columns={0:'sleep_hours'}, inplace=True)
+#sns.relplot(x='date_sleep', y='sleep_hours', 
+#            data=df_for_sleep_stats, kind='line')
+#plt.plot(df_for_sleep_stats['date_sleep'], df_for_sleep_stats['sleep_hours'].rolling(window=30).mean())
 
 
 
@@ -680,7 +787,7 @@ np.sort(time_since_prior_sleep_list)
 
 df_sleep_sessions = df_sleep_8_to_11.groupby('date_sleep')['sleep_session'].mean()
 len(df_sleep_sessions[df_sleep_sessions>1])
-# 41 days have 2+ sleep sessions
+# 29 (41 w total days) days have 2+ sleep sessions
 
 # could derive my own sleep sessions from a break in time series of more than x
 # so not relying on fitbit's definition of sleep session. but hold of on that for the moment
@@ -731,6 +838,8 @@ neg_diff_mean = df_sleep_8_to_11[df_sleep_8_to_11['hr_vs_smoothed_diff']<0]['hr_
 neg_diff_sd = df_sleep_8_to_11[df_sleep_8_to_11['hr_vs_smoothed_diff']<0]['hr_vs_smoothed_diff'].std()
 x_sd_below_mean = neg_diff_mean - neg_diff_sd*3
 
+len(df_sleep_8_to_11['date_sleep'].unique())
+
 # replace outliers with smoothed value
 df_sleep_8_to_11['outlier_hr'] = 0
 df_sleep_8_to_11.loc[(df_sleep_8_to_11['hr_vs_smoothed_diff'] > x_sd_above_mean) |
@@ -743,7 +852,6 @@ df_sleep_8_to_11[['hr', 'hr_clean']]
 #df_sleep_8_to_11_resampled['hr_clean'] = df_sleep_8_to_11_resampled['hr']
 #df_sleep_8_to_11_resampled.loc[df_sleep_8_to_11_resampled['outlier_hr']==1, 'hr_clean'] = df_sleep_8_to_11_resampled['hr_rolling_30_min']
 
-
 # do iterpolation here
 # this first line, when change code to hr above, just interpoliate hr here
 df_sleep_8_to_11['hr_interpolate'] = df_sleep_8_to_11.groupby(['date_sleep', 'sleep_session'])['hr'].transform(lambda x: x.interpolate(limit=1))
@@ -752,11 +860,6 @@ df_sleep_8_to_11['hr_interpolate_clean'] = df_sleep_8_to_11.groupby(['date_sleep
 
 df_sleep_8_to_11[['date_sleep', 'date_time', 'hr', 'hr_interpolate_clean']]
 df_sleep_8_to_11.loc[df_sleep_8_to_11['hr_interpolate'].isnull(), 'hr_rolling_30_min'] = np.nan
-
-len(df_sleep_8_to_11['date_sleep'].unique())  # 699
-dates_vietnam_list = pd.date_range('2016-11-02', '2016-11-12')
-df_sleep_8_to_11 = df_sleep_8_to_11[-df_sleep_8_to_11['date_sleep'].isin(dates_vietnam_list)]
-len(df_sleep_8_to_11['date_sleep'].unique())  # 697
 
 
 # resample here?
@@ -767,16 +870,20 @@ len(df_sleep_8_to_11_resampled)
 df_date = df_sleep_8_to_11_resampled[df_sleep_8_to_11_resampled['date_sleep']==date]
 len(df_date)  # all works
 
+
+df_sleep_8_to_11_resampled[df_sleep_8_to_11_resampled['hr']==36]
+
+
 # plot rolling vs raw on a day
 hr_variable = 'hr_interpolate'  # 'hr_interpolate_clean'
 hr_variable = 'hr_interpolate_clean'  # 'hr_interpolate'
 dates_list = df_sleep_8_to_11_resampled['date_sleep'].unique()
-date = dates_list[501]
-date = '2017-5-26'
-date = '2018-09-04'
-date = '2018-07-18'
-date = '2017-05-07'
-#date = '2016-10-27'  # can see the low outlier
+date = dates_list[325]
+#date = '2017-5-26'
+#date = '2018-09-04'
+#date = '2018-07-18'
+#date = '2017-05-07'  # can see the low outlier
+#date = '2018-07-15'  # can see the low outlier
 df_day = df_sleep_8_to_11_resampled[df_sleep_8_to_11_resampled['date_sleep']==date]
 plt.plot(df_day['date_time'], df_day[hr_variable], 
          alpha=.4, color='green', linewidth=1)
@@ -785,16 +892,28 @@ plt.plot(df_day['date_time'], df_day['hr_rolling_30_min'],
 plt.grid(axis='y', alpha=.4)
 plt.ylim(df_day[hr_variable].min()-1,df_day[hr_variable].max()+1)
 
+
+# for present
+# plot the hr raw alone
+df_day = df_sleep_8_to_11_resampled[df_sleep_8_to_11_resampled['date_sleep']==date]
+ax = plt.figure(figsize=(12,6), dpi=80)  # figsize=(13, 6)
+plt.plot(df_day['date_time'], df_day['hr_interpolate'], 
+         alpha=.5, color='green', linewidth=1.5)
+plt.grid(axis='y', alpha=.5)
+plt.ylim(35,75)
+plt.ylabel('Heart Rate', fontsize=26)
+plt.xlabel('Time', fontsize=26)
+plt.yticks(fontsize=22)
+plt.xticks(fontsize=22)
+ax.axes[0].xaxis.set_major_formatter(DateFormatter('%H:%M'))  
+ax.autofmt_xdate()
+sns.despine()
+#plt.ylim(df_day[hr_variable].min()-1,df_day[hr_variable].max()+1)
+
+
 hr_threshold = 40  # 50
 print(len(df_sleep_8_to_11_resampled[df_sleep_8_to_11_resampled['hr_interpolate']<hr_threshold]['date_sleep'].unique()))
 print(len(df_sleep_8_to_11_resampled[df_sleep_8_to_11_resampled['hr_interpolate_clean']<hr_threshold]['date_sleep'].unique()))
-
-
-# remove vietnam dates - nov 3-12
-len(df_sleep_8_to_11_resampled['date_sleep'].unique())  # 699
-dates_vietnam_list = pd.date_range('2016-11-02', '2016-11-12')
-df_sleep_8_to_11_resampled = df_sleep_8_to_11_resampled[-df_sleep_8_to_11_resampled['date_sleep'].isin(dates_vietnam_list)]
-len(df_sleep_8_to_11_resampled['date_sleep'].unique())  # 697
 
 
 # plot all nights, aggregated
