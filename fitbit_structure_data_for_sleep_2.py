@@ -450,7 +450,21 @@ df_daily_qs['date_prior'] = df_daily_qs['date'] - timedelta(days=1)
 df_daily_qs['date_two_prior'] = df_daily_qs['date'] - timedelta(days=2)
 df_daily_qs[['date_prior', 'date_two_prior', 'date']]
 
-date_to_alcohol_dict = dict(zip(df_daily_qs['date_prior'], df_daily_qs['alcohol']))
+
+df_daily_qs[['date_prior', 'alcohol']]
+df_daily_qs_w_alcohol = df_daily_qs[df_daily_qs['alcohol'].notnull()]
+df_daily_qs_w_alcohol = df_daily_qs_w_alcohol.reset_index(drop=True)
+df_daily_qs_w_alcohol[['date_prior', 'alcohol']]
+df_daily_qs_w_alcohol[['date_prior', 'alcohol']][:50]
+
+sns.relplot(x='date_prior', y='alcohol', data=df_daily_qs_w_alcohol, kind='line')
+
+df_daily_qs_w_alcohol_from_6_1_17 = df_daily_qs_w_alcohol[df_daily_qs_w_alcohol['date_prior']>='2017-09-01']
+df_daily_qs_w_alcohol_from_6_1_17[['date_prior', 'alcohol']]
+
+# alt date to alcohol dict starting a bit later
+date_to_alcohol_dict = dict(zip(df_daily_qs_w_alcohol_from_6_1_17['date_prior'], df_daily_qs_w_alcohol_from_6_1_17['alcohol']))
+#date_to_alcohol_dict = dict(zip(df_daily_qs['date_prior'], df_daily_qs['alcohol']))
 df_sleep['alcohol'] = df_sleep['date_sleep'].map(date_to_alcohol_dict)
 len(df_sleep)  # 725079
 len(df_sleep['date_sleep'].unique())  # 708
@@ -477,9 +491,9 @@ len(df_sleep['date_sleep'].unique())  # 480
 plt.figure(figsize=(14, 6), dpi=80)
 sns.countplot(df_sleep['date_time'].dt.hour, color='dodgerblue', alpha=.5)
 plt.xlabel('Hour of the Day', fontsize=26)
-plt.ylabel('Count', fontsize=26)
+plt.ylabel('Sleep Measurements', fontsize=26)
 plt.xticks(fontsize=22)
-plt.yticks(fontsize=22)
+plt.yticks([],[], fontsize=22)
 sns.despine()
 
 df_sleep.head()
@@ -718,15 +732,19 @@ df_for_sleep_stats.std()
 
 
 # for present
-df_for_sleep_stats.hist(alpha=.5, color='dodgerblue', bins=20)
+#df_for_sleep_stats.hist(alpha=.5, color='dodgerblue', bins=20)
+cat_list = list(range(3,16))
+plt.hist(df_for_sleep_stats.values, alpha=.5, color='dodgerblue', bins=12, align='left')
+plt.xticks(cat_list, cat_list, fontsize=15) 
 plt.xlabel('Hours Asleep', fontsize=20)
 plt.ylabel('Number of Days', fontsize=20)
-plt.xticks(fontsize=15)
 plt.yticks(fontsize=15)
-plt.xlim(df_for_sleep_stats.min(), df_for_sleep_stats.max())
+plt.xlim(df_for_sleep_stats.min()-.6, df_for_sleep_stats.max()+.6)
 plt.axvline(df_for_sleep_stats.mean(), linestyle='--', color='grey')
 plt.grid(False)
 sns.despine()
+
+
 
 # over time?
 #df_for_sleep_stats.head()
@@ -752,9 +770,9 @@ df_sleep_8_to_11.head(40)
 # where don't have any actual interpolated hr data
 
 # for present
-df_sleep_8_to_11['hr'].hist(alpha=.5, color='dodgerblue', bins=25)
+df_sleep_8_to_11['hr'].hist(alpha=.5, color='dodgerblue', bins=25, normed=True)
 plt.xlabel('HR', fontsize=20)
-plt.ylabel('Count', fontsize=20)
+plt.ylabel('Proportinon of\nHR measurements', fontsize=20)
 plt.xticks(fontsize=15)
 plt.yticks(fontsize=15)
 plt.xlim(df_sleep_8_to_11['hr'].min(), df_sleep_8_to_11['hr'].max())
@@ -883,7 +901,7 @@ date = dates_list[325]
 #date = '2018-09-04'
 #date = '2018-07-18'
 #date = '2017-05-07'  # can see the low outlier
-#date = '2018-07-15'  # can see the low outlier
+date = '2018-07-15'  # can see the low outlier
 df_day = df_sleep_8_to_11_resampled[df_sleep_8_to_11_resampled['date_sleep']==date]
 plt.plot(df_day['date_time'], df_day[hr_variable], 
          alpha=.4, color='green', linewidth=1)
@@ -908,7 +926,38 @@ plt.xticks(fontsize=22)
 ax.axes[0].xaxis.set_major_formatter(DateFormatter('%H:%M'))  
 ax.autofmt_xdate()
 sns.despine()
-#plt.ylim(df_day[hr_variable].min()-1,df_day[hr_variable].max()+1)
+
+# for present w smoothed line
+ax = plt.figure(figsize=(12,6), dpi=80)  # figsize=(13, 6)
+plt.plot(df_day['date_time'], df_day['hr_interpolate'], 
+         alpha=.4, color='green', linewidth=1.25)
+plt.plot(df_day['date_time'], df_day['hr_rolling_30_min'], 
+         alpha=.5, color='grey', linewidth=4)  
+plt.grid(axis='y', alpha=.5)
+plt.ylim(35,75)
+plt.ylabel('Heart Rate', fontsize=26)
+plt.xlabel('Time', fontsize=26)
+plt.yticks(fontsize=22)
+plt.xticks(fontsize=22)
+ax.axes[0].xaxis.set_major_formatter(DateFormatter('%H:%M'))  
+ax.autofmt_xdate()
+sns.despine()
+
+# for present w smoothed line and cleaned
+ax = plt.figure(figsize=(12,6), dpi=80)  # figsize=(13, 6)
+plt.plot(df_day['date_time'], df_day['hr_interpolate_clean'], 
+         alpha=.4, color='green', linewidth=1.55)
+#plt.plot(df_day['date_time'], df_day['hr_rolling_30_min'], 
+#         alpha=.5, color='grey', linewidth=4)  
+plt.grid(axis='y', alpha=.5)
+plt.ylim(35,75)
+plt.ylabel('Heart Rate', fontsize=26)
+plt.xlabel('Time', fontsize=26)
+plt.yticks(fontsize=22)
+plt.xticks(fontsize=22)
+ax.axes[0].xaxis.set_major_formatter(DateFormatter('%H:%M'))  
+ax.autofmt_xdate()
+sns.despine()
 
 
 hr_threshold = 40  # 50
@@ -935,58 +984,62 @@ g.fig.autofmt_xdate()
 
 
 # plot aggregated for present
-fig, ax = plt.subplots(nrows=1, ncols=1)
+#fig, ax = plt.figure(figsize=(12,6), dpi=80)  # figsize=(13, 6)
+fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(12,6), dpi=80)
 sns.relplot(x='date_time_bogus', y='hr_interpolate_clean', 
             data=df_sleep_8_to_11_resampled,  # .sample(n=1000), 
-            kind='line', ci=95, ax=ax)
+            kind='line', ci='sd', ax=ax, color='green')
 # assign locator and formatter for the xaxis ticks.
 ax.xaxis.set_major_formatter(DateFormatter('%H:%M'))
 #axis.xaxis.set_major_locator(HourLocator(byhour))
-ax.set_xlabel('Time', fontsize=15)
-ax.set_ylabel('Heart Rate', fontsize=15)
+ax.set_xlabel('Time', fontsize=26)
+ax.set_ylabel('Heart Rate', fontsize=26)
 #ax.set_yticklabels(list(range(50,70,2)))
-yticks = list(range(50,71,2))
+#yticks = list(range(48,66,2))
 yticklabels = [str(tick) for tick in yticks]
-ax.set_yticks(yticks)
-ax.set_yticklabels(yticklabels)
-ax.xaxis.set_tick_params(labelsize=12)
-ax.yaxis.set_tick_params(labelsize=12)
+#ax.set_yticks(yticks)
+#ax.set_yticklabels(yticklabels)
+ax.xaxis.set_tick_params(labelsize=22)
+ax.yaxis.set_tick_params(labelsize=22)
 ax.set_xlim('2018-10-01 21:00:00', '2018-10-02 10:00:00')
-ax.set_ylim(50,68)
+ax.set_ylim(46,69)
+ax.grid(axis='y', alpha=.5)
 fig.autofmt_xdate()
 sns.despine()
 
 
+
+# for present
 # overlay smoothed for many nights
-alpha_level = .05
+alpha_level = .075
 width_for_line = 1
 yticks = list(range(40,80,5))
 yticklabels = [str(tick) for tick in yticks]
-fig, ax = plt.subplots(nrows=1, ncols=1)
+fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(11,6), dpi=80)
 for date in df_sleep_8_to_11_resampled['date_sleep'].unique()[:]:
     df_date = df_sleep_8_to_11_resampled[df_sleep_8_to_11_resampled['date_sleep']==date]
     plt.plot(df_date['date_time_bogus'], df_date['hr_rolling_30_min'], 
              alpha=alpha_level, color='green', linewidth=width_for_line)
 ax.xaxis.set_major_formatter(DateFormatter('%H:%M'))
 fig.autofmt_xdate()
-ax.set_xlabel('Time', fontsize=15)
-ax.set_ylabel('Heart Rate', fontsize=15)
-ax.set_xlim('2018-10-01 21:00:00', '2018-10-02 11:00:00')
-ax.set_ylim(43,82)
-ax.xaxis.set_tick_params(labelsize=12)
-ax.yaxis.set_tick_params(labelsize=12)
+ax.set_xlabel('Time', fontsize=26)
+ax.set_ylabel('Heart Rate', fontsize=26)
+ax.set_xlim('2018-10-01 22:00:00', '2018-10-02 11:00:00')
+ax.set_ylim(43,72)
+ax.xaxis.set_tick_params(labelsize=22)
+ax.yaxis.set_tick_params(labelsize=22)
 sns.despine()
 # use this to grab a few outliers -- what's going on here?
 
 
 # plot select nights in grid
-dates_to_plot_list = list(df_sleep_8_to_11_resampled['date_sleep'].unique())
-dates_to_plot_list = dates_to_plot_list[100:105]
-sns.relplot(x='date_time_bogus', y='hr_interpolate_clean',
-            col='date_sleep', col_wrap=1,
-            height=3, aspect=4, linewidth=2.5, kind='line', 
-            data=df_sleep_8_to_11_resampled[df_sleep_8_to_11_resampled['date_sleep'].isin(dates_to_plot_list)]);
-
+#dates_to_plot_list = list(df_sleep_8_to_11_resampled['date_sleep'].unique())
+#dates_to_plot_list = dates_to_plot_list[100:105]
+#sns.relplot(x='date_time_bogus', y='hr_interpolate_clean',
+#            col='date_sleep', col_wrap=1,
+#            height=3, aspect=4, linewidth=2.5, kind='line', 
+#            data=df_sleep_8_to_11_resampled[df_sleep_8_to_11_resampled['date_sleep'].isin(dates_to_plot_list)]);
+#
             
             
             
@@ -1002,88 +1055,105 @@ sns.relplot(x='date_time_bogus', y='hr_interpolate_clean',
 
 # row = night's sleep
 df_hr_mean = df_sleep_8_to_11_resampled.groupby('date_sleep')['hr_clean'].mean().reset_index().rename(columns={'hr_clean':'hr_mean'})
+df_hr_mean.head()
 
 df_hr_mean['hr_mean'].hist(alpha=.5, bins=25, color='dodgerblue' )
 plt.grid(False)
 plt.axvline(df_hr_mean['hr_mean'].mean(), linestyle='--', color='black', linewidth=1, alpha=.75)
 
 
+# ----------------------------------------------------------------------------
+# imported daily ratings earlier already
+
 # import daily ratings
 # get daily questions -
-df_daily_qs_early = pd.read_excel('Mood Measure (Responses).xlsx')
-df_daily_qs_early.head()
+#df_daily_qs_early = pd.read_excel('Mood Measure (Responses).xlsx')
+#df_daily_qs_early.head()
+#
+#df_daily_qs_early = df_daily_qs_early[df_daily_qs_early['What are your initials']=='AM']
+#df_daily_qs_early['date'] = pd.to_datetime(df_daily_qs_early['Timestamp'].dt.year.astype(str) + '-' + df_daily_qs_early['Timestamp'].dt.month.astype(str) + '-' + df_daily_qs_early['Timestamp'].dt.day.astype(str))
+#df_daily_qs_early['date_short'] = df_daily_qs_early['date'].dt.date
+#df_daily_qs_early.head()
+#
+## qs to use and merge with current qs?
+#df_daily_qs_early.dtypes
+#df_daily_qs_early = df_daily_qs_early[['date', 'Today, are you tired?', 'Last night, did you sleep well?']]
+#df_daily_qs_early['energy'] = 5 - df_daily_qs_early['Today, are you tired?']
+#df_daily_qs_early.rename(columns={'Last night, did you sleep well?':'sleep'}, inplace=True)
+#df_daily_qs_early = df_daily_qs_early[['date', 'energy', 'sleep']]
+#
+#
+#df_daily_qs_current = pd.read_excel('Daily_Measure_2018_10_8.xlsx')
+##df_daily_qs_current = pd.read_csv('Daily_Measure_from_2_26_17.csv')
+#df_daily_qs_current.head()
+#df_daily_qs_current.tail()
+#
+#df_daily_qs_current['Timestamp'] = pd.to_datetime(df_daily_qs_current['Timestamp'])
+#df_daily_qs_current['year'] = df_daily_qs_current['Timestamp'].dt.year.astype(str).str.split('.').str[0]
+#df_daily_qs_current['month'] = df_daily_qs_current['Timestamp'].dt.month.astype(str).str.split('.').str[0]
+#df_daily_qs_current['day'] = df_daily_qs_current['Timestamp'].dt.day.astype(str).str.split('.').str[0]
+#df_daily_qs_current['date'] = df_daily_qs_current['year'] + '-' + df_daily_qs_current['month'] + '-' + df_daily_qs_current['day']
+#df_daily_qs_current['date'].replace('nan-nan-nan', np.nan, inplace=True)
+#df_daily_qs_current['date'] = pd.to_datetime(df_daily_qs_current['date'])
+#df_daily_qs_current.columns
+#
+#df_daily_qs_current = df_daily_qs_current[['date', 'Right now I feel energetic.',
+#       'At some point today I felt annoyed.', 'At some point today I had fun with someone.',
+#       'Last night, I woke up from a restorative sleep.', 'Last night I had ____ alcoholic drinks',
+#       'The alcohol I drank last night was ____', 'Notes', 'Right now I feel tired.', 
+#       'At some point today I felt insulted.']]
+#
+#df_daily_qs_current.columns
+#df_daily_qs_current.columns = ['date', 'energy', 'annoyed', 'fun', 'sleep', 'alcohol', 'alcohol_type', 'notes', 'tired', 'insulted']
+#
+#for col in df_daily_qs_current.columns:
+#    print(col, len(df_daily_qs_current[df_daily_qs_current[col].isnull()]))
+#
+#for col in df_daily_qs_current.columns:
+#    print(col, len(df_daily_qs_current[df_daily_qs_current[col].notnull()]))
+## given that i have annoyed and energy for just about all rows, i can delete tired and insulted
+#df_daily_qs_current = df_daily_qs_current[['date', 'energy', 'annoyed', 'fun', 
+#                                           'sleep', 'alcohol', 'alcohol_type',
+#                                           'notes']]
+#
+#df_daily_qs_current['alcohol']
+#
+#df_daily_qs = pd.concat([df_daily_qs_early, df_daily_qs_current], ignore_index=True)
+#df_daily_qs.head(20)
+#
+## 6 duplicate dates
+#len(df_daily_qs['date'].unique())
+#len(df_daily_qs)
+#
+#dates_duplicated_list = df_daily_qs[df_daily_qs['date'].duplicated()]['date'].values
+#df_daily_qs[df_daily_qs['date'].isin(dates_duplicated_list)]
+#df_daily_qs = df_daily_qs.drop_duplicates(subset='date', keep='last')
+#df_daily_qs.tail()
+#
+## the alcohol from the date on df_daily_qs refers to previous date
+#df_daily_qs['date_prior'] = df_daily_qs['date'] - timedelta(days=1)
+#df_daily_qs['date_two_prior'] = df_daily_qs['date'] - timedelta(days=2)
+#
+#df_daily_qs[['date_prior', 'date_two_prior', 'date']]
+#date_to_alcohol_dict = dict(zip(df_daily_qs['date_prior'], df_daily_qs['alcohol']))
+# ----------------------------------------------------------------------------
 
-df_daily_qs_early = df_daily_qs_early[df_daily_qs_early['What are your initials']=='AM']
-df_daily_qs_early['date'] = pd.to_datetime(df_daily_qs_early['Timestamp'].dt.year.astype(str) + '-' + df_daily_qs_early['Timestamp'].dt.month.astype(str) + '-' + df_daily_qs_early['Timestamp'].dt.day.astype(str))
-df_daily_qs_early['date_short'] = df_daily_qs_early['date'].dt.date
-df_daily_qs_early.head()
 
-# qs to use and merge with current qs?
-df_daily_qs_early.dtypes
-df_daily_qs_early = df_daily_qs_early[['date', 'Today, are you tired?', 'Last night, did you sleep well?']]
-df_daily_qs_early['energy'] = 5 - df_daily_qs_early['Today, are you tired?']
-df_daily_qs_early.rename(columns={'Last night, did you sleep well?':'sleep'}, inplace=True)
-df_daily_qs_early = df_daily_qs_early[['date', 'energy', 'sleep']]
-
-
-df_daily_qs_current = pd.read_excel('Daily_Measure_2018_10_8.xlsx')
-#df_daily_qs_current = pd.read_csv('Daily_Measure_from_2_26_17.csv')
-df_daily_qs_current.head()
-df_daily_qs_current.tail()
-
-df_daily_qs_current['Timestamp'] = pd.to_datetime(df_daily_qs_current['Timestamp'])
-df_daily_qs_current['year'] = df_daily_qs_current['Timestamp'].dt.year.astype(str).str.split('.').str[0]
-df_daily_qs_current['month'] = df_daily_qs_current['Timestamp'].dt.month.astype(str).str.split('.').str[0]
-df_daily_qs_current['day'] = df_daily_qs_current['Timestamp'].dt.day.astype(str).str.split('.').str[0]
-df_daily_qs_current['date'] = df_daily_qs_current['year'] + '-' + df_daily_qs_current['month'] + '-' + df_daily_qs_current['day']
-df_daily_qs_current['date'].replace('nan-nan-nan', np.nan, inplace=True)
-df_daily_qs_current['date'] = pd.to_datetime(df_daily_qs_current['date'])
-df_daily_qs_current.columns
-
-df_daily_qs_current = df_daily_qs_current[['date', 'Right now I feel energetic.',
-       'At some point today I felt annoyed.', 'At some point today I had fun with someone.',
-       'Last night, I woke up from a restorative sleep.', 'Last night I had ____ alcoholic drinks',
-       'The alcohol I drank last night was ____', 'Notes', 'Right now I feel tired.', 
-       'At some point today I felt insulted.']]
-
-df_daily_qs_current.columns
-df_daily_qs_current.columns = ['date', 'energy', 'annoyed', 'fun', 'sleep', 'alcohol', 'alcohol_type', 'notes', 'tired', 'insulted']
-
-for col in df_daily_qs_current.columns:
-    print(col, len(df_daily_qs_current[df_daily_qs_current[col].isnull()]))
-
-for col in df_daily_qs_current.columns:
-    print(col, len(df_daily_qs_current[df_daily_qs_current[col].notnull()]))
-# given that i have annoyed and energy for just about all rows, i can delete tired and insulted
-df_daily_qs_current = df_daily_qs_current[['date', 'energy', 'annoyed', 'fun', 
-                                           'sleep', 'alcohol', 'alcohol_type',
-                                           'notes']]
-
-df_daily_qs_current['alcohol']
-
-df_daily_qs = pd.concat([df_daily_qs_early, df_daily_qs_current], ignore_index=True)
-df_daily_qs.head(20)
-
-# 6 duplicate dates
-len(df_daily_qs['date'].unique())
-len(df_daily_qs)
-
-dates_duplicated_list = df_daily_qs[df_daily_qs['date'].duplicated()]['date'].values
-df_daily_qs[df_daily_qs['date'].isin(dates_duplicated_list)]
-df_daily_qs = df_daily_qs.drop_duplicates(subset='date', keep='last')
-df_daily_qs.tail()
-
-# the alcohol from the date on df_daily_qs refers to previous date
-df_daily_qs['date_prior'] = df_daily_qs['date'] - timedelta(days=1)
-df_daily_qs['date_two_prior'] = df_daily_qs['date'] - timedelta(days=2)
-
-df_daily_qs[['date_prior', 'date_two_prior', 'date']]
-
-date_to_alcohol_dict = dict(zip(df_daily_qs['date_prior'], df_daily_qs['alcohol']))
+df_hr_mean['alcohol'] = np.nan
 df_hr_mean['alcohol'] = df_hr_mean['date_sleep'].map(date_to_alcohol_dict)
 len(df_hr_mean[df_hr_mean['alcohol'].notnull()])
 
-sns.countplot(x='alcohol', data=df_hr_mean, alpha=.7, color='dodgerblue')
+# for present
+df_pct_alcohol = df_hr_mean['alcohol'].value_counts(normalize=True).reset_index()
+sns.barplot(x='index', y='alcohol', data=df_pct_alcohol, alpha=.6, 
+            color='dodgerblue')
+plt.ylabel('Proportion of Days', fontsize=20)
+plt.xlabel('Number of Drinks', fontsize=20)
+plt.xticks([0,1,2,3,4,5], ['0','1','2','3','4','5'], fontsize=16)
+plt.yticks(fontsize=16)
+sns.despine()
+
+
 df_hr_mean['alcohol'].replace([5,6],[4,4], inplace=True)
 
 sns.countplot(x='alcohol', data=df_hr_mean, alpha=.7, color='dodgerblue')
@@ -1093,8 +1163,6 @@ plt.xticks(fontsize=14)
 plt.yticks(fontsize=14)
 sns.despine()
 
-df_hr_mean['alcohol'].value_counts(normalize=True).plot(kind='bar', 
-          color='dodgerblue', alpha=.5)
 
 df_pct_alcohol = df_hr_mean['alcohol'].value_counts(normalize=True).reset_index()
 # for present
@@ -1114,7 +1182,7 @@ df_hr_mean['alcohol_tertile'] = df_hr_mean['alcohol_tertile'].astype(str)
 df_hr_mean['alcohol_tertile'] = df_hr_mean['alcohol_tertile'].str.split('.').str[0]
 df_hr_mean['alcohol_tertile'].replace('nan', np.nan, inplace=True)
 df_pct_alcohol = df_hr_mean['alcohol_tertile'].value_counts(normalize=True).reset_index()
-# for present
+
 sns.barplot(x='index', y='alcohol_tertile', data=df_pct_alcohol, alpha=.6, 
             color='dodgerblue')
 plt.ylabel('Proportion of Days', fontsize=15)
@@ -1124,7 +1192,7 @@ plt.xticks([0,1,2], ['0','1','2+'], fontsize=14)
 sns.despine()
 
 
-# for present
+# CONVER THIS TO 0, 1, 2+ PRESENT GRAPH?
 sns.barplot(x='alcohol', y='hr_mean', data=df_hr_mean, alpha=.6, 
             color='dodgerblue', errcolor='grey')
 plt.ylim(40,65)
@@ -1134,6 +1202,19 @@ plt.xticks([0,1,2,3,4], ['0','1','2','3','4+'], fontsize=14)
 plt.yticks(fontsize=14)
 sns.despine()
 
+df_hr_mean['alcohol_tertile'].value_counts()
+sns.barplot(x='alcohol_tertile', y='hr_mean', data=df_hr_mean, alpha=.6, 
+            color='dodgerblue', errcolor='grey', 
+            order=['no_drinks', 'one_drink', 'two_plus_drinks'])
+plt.ylim(40,65)
+plt.ylabel('Mean Heart Rate', fontsize=15)
+plt.xlabel('Number of Drinks', fontsize=15)
+#plt.xticks([0,1,2], ['0','1','2','3','4+'], fontsize=14)
+plt.xticks(fontsize=15)
+plt.yticks(fontsize=15)
+sns.despine()
+
+df_hr_mean.groupby('alcohol_tertile')['hr_mean'].std()
 
 results = smf.ols(formula = 'hr_mean ~ alcohol', data=df_hr_mean).fit()
 print(results.summary())
@@ -1177,6 +1258,7 @@ sns.barplot(x='day_name', y='hr_mean', data=df_hr_mean,
 plt.ylim(40,60)
 
 df_hr_mean = pd.concat([df_hr_mean, pd.get_dummies(df_hr_mean['day_name'])], axis=1)
+
 
 #df_hr_mean = df_hr_mean[['date_sleep', 'hr_mean', 'alcohol', 'alcohol_tertile', 
 #                         'alcohol_dichot', 'day_of_week', 'day_name']]
@@ -1431,12 +1513,37 @@ results = smf.ols(formula = """hr_mean ~ alcohol + tue + wed + thu + fri +
                   sat + sun + temp + I(temp**2) + month_ts + start_sleep_time + 
                   I(start_sleep_time**2) + 
                   hr_mean_lag1 + hr_mean_lag2 + hr_mean_lag3 + alcohol_lag1 + 
-                  subj_sleep_lag1""", data=df_hr_mean).fit()
+                  subj_sleep_lag1 + fun_lag1""", data=df_hr_mean).fit()
 print(results.summary())
 
 # left out min_asleep + I(min_asleep**2) + 
 # doesn't change things and not sure i should control for this since
 # it's at the same time as the hr mean is calculated, right?
+
+
+# get the model i want with all
+# get alcohol 0, 1, 2+
+df_hr_mean = df_hr_mean[df_hr_mean['alcohol'].notnull()]
+df_hr_mean['alcohol_tertile'].replace(['0','1','2'], ['no_drinks', 'one_drink', 'two_plus_drinks'], inplace=True)
+df_hr_mean['alcohol_tertile'].value_counts(normalize=True)
+df_hr_mean = pd.concat([df_hr_mean, pd.get_dummies(df_hr_mean['alcohol_tertile'])], axis=1)
+df_hr_mean.head()
+#df_hr_mean[['no_drinks', 'one_drink']]
+#del df_hr_mean['two_plus_drinks']
+
+# for present
+# model control for confounds
+results = smf.ols(formula = """hr_mean ~ one_drink + two_plus_drinks + 
+                  tue + wed + thu + fri + sat + sun + temp + month_ts + 
+                  start_sleep_time + hr_mean_lag1 + hr_mean_lag2 + 
+                  alcohol_lag1 + fun_lag1""", data=df_hr_mean).fit()
+print(results.summary())
+
+# model plain
+results = smf.ols(formula = """hr_mean ~ one_drink + two_plus_drinks""", data=df_hr_mean).fit()
+print(results.summary())
+
+
 
 # get all vars set to answer any qs
 
@@ -1501,18 +1608,119 @@ plot_corr_matrix_heatmap(df_hr_mean, var_list, var_list)
 
 # set all drink vars to 0 to get hr when 0 drinks
 
-results = smf.ols(formula = """hr_mean ~ C(alcohol) + month_ts """, data=df_hr_mean).fit()
+# for present
+# simple model
+results = smf.ols(formula = """hr_mean ~ one_drink + two_plus_drinks""", data=df_hr_mean).fit()
 print(results.summary())
 # get coefs
 intercept = results.params[0]
 drink_1 = results.params[1]
 drink_2 = results.params[2]
-drink_3 = results.params[3]
-drink_4 = results.params[4]
-coef_cov_1 = results.params[5]
+
+y_hr_drinks_0 = intercept + drink_1*0 + drink_2*0 
+y_hr_drinks_1 = intercept + drink_1*1 + drink_2*0 
+y_hr_drinks_2 = intercept + drink_1*0 + drink_2*1 
+
+se_drinks_0 = results.bse[0]  # this se of the intercept might be se of 0 drinks?
+se_drinks_1 = results.bse[1]
+se_drinks_2 = results.bse[2]
+
+se_drinks_0 = df_hr_mean[df_hr_mean['alcohol']==0]['hr_mean'].std() / np.sqrt(len(df_hr_mean[df_hr_mean['alcohol']==0]))
+se_drinks_1 = df_hr_mean[df_hr_mean['alcohol']==1]['hr_mean'].std() / np.sqrt(len(df_hr_mean[df_hr_mean['alcohol']==1]))
+se_drinks_2 = df_hr_mean[df_hr_mean['alcohol']>=2]['hr_mean'].std() / np.sqrt(len(df_hr_mean[df_hr_mean['alcohol']>=2]))
+
+error_bar_list = [1.96*se_drinks_0, 1.96*se_drinks_1, 1.96*se_drinks_2]
+
+#fig = plt.figure(figsize=(12, 5))
+plt.bar([0,1,2], [y_hr_drinks_0, y_hr_drinks_1, y_hr_drinks_2], yerr=error_bar_list, color='dodgerblue', 
+        alpha=.5, error_kw={'ecolor':'grey', 'linewidth':3, 'ecapsize':30}, align='center')
+plt.grid(False)
+plt.xticks([0,1,2],['No drinks', '1 drink', '2+ drinks'], fontsize=20)
+#plt.yticks([.1,.2,.3,.4],['10%','20%','30%','40%'],fontsize=28)
+plt.yticks(fontsize=18)
+plt.ylabel('Nightly Heart Rate', fontsize=22)
+plt.ylim(45,60)
+#plt.text(-.38, .36, 'p < .001', fontsize=30, bbox={'facecolor':'green', 'alpha':0.3, 'pad':5})  
+sns.despine()
+
+
+
+# for present
+# full model
+results = smf.ols(formula = """hr_mean ~ one_drink + two_plus_drinks + 
+                  tue + wed + thu + fri + sat + sun + temp + month_ts + 
+                  start_sleep_time + hr_mean_lag1 + hr_mean_lag2 + 
+                  alcohol_lag1 + fun_lag1""", data=df_hr_mean).fit()
+print(results.summary())
+
+number_of_ivs_in_model = 2
+intercept = results.params[0]
+ivs = results.params[1:number_of_ivs_in_model+1].reset_index().rename(columns={0:'coefficient'})
+iv_list = list(ivs['index'].values)
+iv_coefficient_list = list(ivs['coefficient'].values)
+covariates = results.params[number_of_ivs_in_model+1:].reset_index().rename(columns={0:'coefficient'})
+covariate_list = list(covariates['index'].values)
+covariate_coefficient_list = list(covariates['coefficient'].values)
+covariate_mean_list = list(df_hr_mean[covariate_list].mean().values)
+covariate_mean_x_coef_list = [coef*mean for coef, mean in zip(covariate_coefficient_list, covariate_mean_list)]
+
+# get mean for each iv
+iv_mean_list = []
+iv_1_mean = intercept + sum(covariate_mean_x_coef_list)
+iv_mean_list.append(iv_1_mean)
+for i in range(len(iv_coefficient_list)):
+    iv_mean_number = (intercept + sum(covariate_mean_x_coef_list)) + iv_coefficient_list[i]
+    iv_mean_list.append(iv_mean_number)
+
+# i think i shold use the std error from the regression
+# but what to use for 0 drinks?
+se_drinks_0 = df_hr_mean[df_hr_mean['alcohol']==0]['hr_mean'].std() / np.sqrt(len(df_hr_mean[df_hr_mean['alcohol']==0]))
+se_drinks_1 = results.bse[1]
+se_drinks_2 = results.bse[2]
+#se_list = [se_drinks_0, se_drinks_1, se_drinks_2]
+error_bar_list = [1.96*se_drinks_0, 1.96*se_drinks_1, 1.96*se_drinks_2]
+
+
+plt.bar([0,1,2], iv_mean_list, yerr=error_bar_list, color='dodgerblue', 
+        alpha=.5, error_kw={'ecolor':'grey', 'linewidth':3, 'ecapsize':30}, align='center')
+plt.grid(False)
+plt.xticks([0,1,2],['No drinks', '1 drink', '2+ drinks'], fontsize=20)
+#plt.yticks([.1,.2,.3,.4],['10%','20%','30%','40%'],fontsize=28)
+plt.yticks(fontsize=18)
+plt.ylabel('Nightly Heart Rate\n(adjusted for covarirates)', fontsize=22)
+plt.ylim(45,60)
+#plt.text(-.38, .36, 'p < .001', fontsize=30, bbox={'facecolor':'green', 'alpha':0.3, 'pad':5})  
+sns.despine()
+
+results.pvalues.one_drink
+results.pvalues.two_plus_drinks
+
+results.tvalues
+
+# effect size 
+
+n_total = len(df_hr_mean[df_hr_mean['one_drink'].notnull()])
+n_control = len(df_hr_mean[df_hr_mean['one_drink']==0])
+n_treatment = len(df_hr_mean[df_hr_mean['one_drink']==1])
+t_value = results.tvalues[1]
+cohens_d = t_value * np.sqrt( ((n_treatment + n_control)/(n_treatment * n_control)) * ((n_treatment + n_control) / (n_treatment + n_control - 2) ))
+
+n_total = len(df_hr_mean[df_hr_mean['two_plus_drinks'].notnull()])
+n_control = len(df_hr_mean[df_hr_mean['two_plus_drinks']==0])
+n_treatment = len(df_hr_mean[df_hr_mean['two_plus_drinks']==1])
+t_value = results.tvalues[2]
+cohens_d = t_value * np.sqrt( ((n_treatment + n_control)/(n_treatment * n_control)) * ((n_treatment + n_control) / (n_treatment + n_control - 2) ))
+
+
+len(df_hr_mean['date_sleep'].unique())
+
+#iv_list
+#drink_3 = results.params[3]
+#drink_4 = results.params[4]
+#coef_cov_1 = results.params[5]
 # get means
 
-mean_cov_1 = df_hr_mean['month_ts'].mean()
+#mean_cov_1 = df_hr_mean['month_ts'].mean()
 
 y_hr_drinks_0 = intercept + coef_cov_1*mean_cov_1 + drink_1*0 + drink_2*0 + drink_3*0 + drink_4*0 
 y_hr_drinks_1 = intercept + coef_cov_1*mean_cov_1 + drink_1*1 + drink_2*0 + drink_3*0 + drink_4*0 
@@ -1538,6 +1746,7 @@ se_drinks_4 = results.bse[4]
 
 
 # time series by drinks
+df_sleep_8_to_11_resampled['alcohol'] = np.nan
 df_sleep_8_to_11_resampled['alcohol'] = df_sleep_8_to_11_resampled['date_sleep'].map(date_to_alcohol_dict)
 
 sns.countplot(x='alcohol', data=df_sleep_8_to_11_resampled, alpha=.6) 
@@ -1558,30 +1767,31 @@ df_sleep_8_to_11_resampled['alcohol_tertile'] = df_sleep_8_to_11_resampled['alco
 df_sleep_8_to_11_resampled['alcohol_tertile'].replace('nan', np.nan, inplace=True)
 
 
-fig, ax = plt.subplots(nrows=1, ncols=1)
+# for present
+fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(12,6), dpi=80)
+#fig, ax = plt.subplots(nrows=1, ncols=1)
 sns.relplot(x='date_time_bogus', y='hr_clean', 
             data=df_sleep_8_to_11_resampled,  # .sample(n=1000), 
-            kind='line', ci=95, hue='alcohol_tertile', alpha=.4,
+            kind='line', ci=95, hue='alcohol_tertile', alpha=.5,
             palette=['green', 'orange', 'red'], 
             hue_order=['0','1','2'], ax=ax)
 #ax.xaxis_date()
 ax.xaxis.set_major_formatter(DateFormatter('%H:%M'))
 #axis.xaxis.set_major_locator(HourLocator(byhour))
-ax.set_xlabel('Time', fontsize=15)
-ax.set_ylabel('Heart Rate', fontsize=15)
+ax.set_xlabel('Time', fontsize=26)
+ax.set_ylabel('Heart Rate', fontsize=26)
 #ax.set_yticklabels(list(range(50,70,2)))
-yticks = list(range(48,74,2))
+yticks = list(range(50,75,5))
 yticklabels = [str(tick) for tick in yticks]
 ax.set_yticks(yticks)
 ax.set_yticklabels(yticklabels)
-ax.xaxis.set_tick_params(labelsize=12)
-ax.yaxis.set_tick_params(labelsize=12)
+ax.xaxis.set_tick_params(labelsize=22)
+ax.yaxis.set_tick_params(labelsize=22)
 ax.set_xlim('2018-10-01 22:00:00', '2018-10-02 10:00:00')
-ax.set_ylim(47,75)
-ax.legend(['No drinks', '1 drink', '2+ drinks'])
+ax.set_ylim(48,75)  
+ax.legend(['No drinks', '1 drink', '2+ drinks'], fontsize=22)
 fig.autofmt_xdate()
-sns.despine()
-
+#sns.despine()
 
 
 df_asleep = df_sleep_8_to_11_resampled[df_sleep_8_to_11_resampled['awake']!=1]
@@ -1613,34 +1823,65 @@ df_asleep['minutes_from_waking'].hist()
 #df_date = df_asleep[df_asleep['date_sleep']=='2017-06-01']
 
 
+# for present
+#fig = plt.figure(figsize=(20, 6), dpi=80)
+fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(12,6), dpi=80)
 sns.relplot(x='minutes_asleep', y='hr_interpolate_clean', 
             data=df_asleep,  # .sample(n=1000), 
-            kind='line', ci=95, hue='alcohol_tertile', alpha=.4,
+            kind='line', ci=95, hue='alcohol_tertile', alpha=.5,
             palette=['green', 'orange', 'red'], 
-            hue_order=['0','1','2'])
-plt.xlim(0,8)
-plt.ylabel('Heart Rate', fontsize=15)
-plt.xlabel('Number of Hours From Sleep Onset', fontsize=15)
-plt.xticks(fontsize=14)
-plt.yticks(fontsize=14)
-plt.legend(['No drinks', '1 drink', '2+ drinks'])
-sns.despine()
+            hue_order=['0','1','2'], ax=ax)
+yticks = list(range(50,75,5))
+yticklabels = [str(tick) for tick in yticks]
+ax.set_yticks(yticks)
+ax.set_yticklabels(yticklabels)
+ax.xaxis.set_tick_params(labelsize=22)
+ax.yaxis.set_tick_params(labelsize=22)
+ax.set_xlabel('Number of Hours From Sleep Onset', fontsize=26)
+ax.set_ylabel('Heart Rate', fontsize=26)
+ax.set_xlim(0,8)
+ax.set_ylim(49,71)  
+ax.legend(['No drinks', '1 drink', '2+ drinks'], fontsize=22)
+
+#plt.xlim(0,8)
+#plt.ylabel('Heart Rate', fontsize=26)
+#plt.xlabel('Number of Hours From Sleep Onset', fontsize=26)
+#plt.xticks(fontsize=22)
+#plt.yticks(fontsize=22)
+#plt.legend(['No drinks', '1 drink', '2+ drinks'])
+#sns.despine()
 
 
+# present
 # something is wrong w this. red isn't gong to 0.
+fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(12,6), dpi=80)
 sns.relplot(x='minutes_from_waking', y='hr_interpolate_clean', 
             data=df_asleep,  # .sample(n=1000), 
-            kind='line', ci=95, hue='alcohol_tertile', alpha=.4,
+            kind='line', ci=95, hue='alcohol_tertile', alpha=.5,
             palette=['green', 'orange', 'red'], 
-            hue_order=['0','1','2'])
-plt.xlim(0,8)
-plt.ylabel('Heart Rate', fontsize=15)
-plt.xlabel('Number of Hours From Waking', fontsize=15)
-plt.xticks(fontsize=14)
-plt.yticks(fontsize=14)
-plt.gca().invert_xaxis()
-plt.legend(['No drinks', '1 drink', '2+ drinks'])
-sns.despine()
+            hue_order=['0','1','2'], ax=ax)
+yticks = list(range(50,75,5))
+yticklabels = [str(tick) for tick in yticks]
+ax.set_yticks(yticks)
+ax.set_yticklabels(yticklabels)
+ax.xaxis.set_tick_params(labelsize=22)
+ax.yaxis.set_tick_params(labelsize=22)
+ax.set_xlabel('Number of Hours From Waking', fontsize=26)
+ax.set_ylabel('Heart Rate', fontsize=26)
+ax.set_xlim(0,8)
+ax.set_ylim(49,71)  
+ax.legend(['No drinks', '1 drink', '2+ drinks'], fontsize=22)
+ax.invert_xaxis()
+#plt.xlim(0,8)
+#plt.ylabel('Heart Rate', fontsize=15)
+#plt.xlabel('Number of Hours From Waking', fontsize=15)
+#plt.xticks(fontsize=14)
+#plt.yticks(fontsize=14)
+#plt.gca().invert_xaxis()
+#plt.legend(['No drinks', '1 drink', '2+ drinks'])
+#sns.despine()
+
+
 
 # explore that lip just before waking. is there a lot of variability in that?
 
