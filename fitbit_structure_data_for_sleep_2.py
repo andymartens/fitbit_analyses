@@ -3,6 +3,10 @@
 Created on Sat Dec 24 16:23:34 2016
 
 @author: charlesmartens
+
+Analyses:
+Alcohol on HR while asleep (presented at Google).
+
 """
 
 

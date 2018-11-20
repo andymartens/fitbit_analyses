@@ -41,7 +41,8 @@ consumer_secret = '90a8354c89aa8b6344eb285c87f9e052'
 # plug them into the website to get a token. so will need to get a new token ea time i download new data
 #token = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0WU1WUDMiLCJhdWQiOiIyMjg2SFMiLCJpc3MiOiJGaXRiaXQiLCJ0eXAiOiJhY2Nlc3NfdG9rZW4iLCJzY29wZXMiOiJyc2V0IHJhY3QgcmxvYyByaHIgcnBybyByc2xlIiwiZXhwIjoxNTM4Nzc1NTg3LCJpYXQiOjE1MzgxNzA3ODd9.6CW8ZrF0ojxAQO-o-R3jyAnnHx0gHxEgAvr33g7RZCw'
 #token = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0WU1WUDMiLCJhdWQiOiIyMjg2SFMiLCJpc3MiOiJGaXRiaXQiLCJ0eXAiOiJhY2Nlc3NfdG9rZW4iLCJzY29wZXMiOiJyc29jIHJzZXQgcmFjdCBybG9jIHJ3ZWkgcmhyIHJudXQgcnBybyByc2xlIiwiZXhwIjoxNTM4Nzk0MDYyLCJpYXQiOjE1MzgxODkyNjJ9.If8hfgK1PRvLyN9XA75cmWcE59IjHNQ8kVeajUftetI'
-token = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0WU1WUDMiLCJhdWQiOiIyMjg2SFMiLCJpc3MiOiJGaXRiaXQiLCJ0eXAiOiJhY2Nlc3NfdG9rZW4iLCJzY29wZXMiOiJyc29jIHJzZXQgcmFjdCBybG9jIHJ3ZWkgcmhyIHJudXQgcnBybyByc2xlIiwiZXhwIjoxNTM4Nzk0MDYyLCJpYXQiOjE1MzgyNTE5MTJ9.Fjkul07xFarNcv7TCT-IqCnfr9S7L1Crh8q2FAMd_zo'
+#token = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIyMjg2SFMiLCJzdWIiOiI0WU1WUDMiLCJpc3MiOiJGaXRiaXQiLCJ0eXAiOiJhY2Nlc3NfdG9rZW4iLCJzY29wZXMiOiJyc29jIHJhY3QgcnNldCBybG9jIHJ3ZWkgcmhyIHJwcm8gcm51dCByc2xlIiwiZXhwIjoxNTQzMDk5OTg1LCJpYXQiOjE1NDI0OTUxODV9.4L9BwxqWDmI6nJwioVy80NMOIDoDTGT5v2Nf_FDc8Lc'
+token = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIyMjg2SFMiLCJzdWIiOiI0WU1WUDMiLCJpc3MiOiJGaXRiaXQiLCJ0eXAiOiJhY2Nlc3NfdG9rZW4iLCJzY29wZXMiOiJyc29jIHJzZXQgcmFjdCBybG9jIHJ3ZWkgcmhyIHJudXQgcnBybyByc2xlIiwiZXhwIjoxNTQzMDk5OTg1LCJpYXQiOjE1NDI0OTU0OTV9.3tvq4UgNC6olXYerpWQ8O3ezH5ebRcU5xFwjGaq83E0'
 
 client = fitbit.FitbitOauth2Client(consumer_key, consumer_secret)
 client.authorize_token_url(token)
@@ -63,6 +64,8 @@ stats_sleep = authd_client.sleep(date=date)
 
 dir(authd_client)
 dir(authd_client.sleep)
+
+authd_client.activity_stats
 
 stats_hr_one_day = authd_client.intraday_time_series('activities/heart', base_date=date,
                                              detail_level='1min', start_time='00:00',
@@ -143,7 +146,62 @@ pickle_hr_continuous(authd_client, dates)
 # get activity summary
 # (don't need continuous actiity data for now)
 
+GET /1/user/[user-id]/[resource-path]/date/[date]/[period].json
+activities/steps
+
+dates = pd.date_range('08/11/2018', '09/25/2018', freq='D')
+date = dates[4]
+stats_activity = authd_client.intraday_time_series('activities/steps', base_date=date,
+                                                   detail_level='1min', start_time='00:00',
+                                                   end_time='23:59')
+
+stats_activity = authd_client.intraday_time_series('activities/floors', base_date=date,
+                                                   detail_level='1min', start_time='00:00',
+                                                   end_time='23:59')
+
+stats_activity.keys()
+stats_activity['activities-elevation-intraday'].keys()
+stats_activity['activities-elevation-intraday']['dataset']
+
+stats_activity['activities-floors-intraday']['dataset']
+
+l = []
+for i in range(len(stats_activity['activities-floors-intraday']['dataset']))[:]:
+    l = l + [stats_activity['activities-floors-intraday']['dataset'][i]['value']]
+
+l = []
+for i in range(len(stats_activity['activities-elevation-intraday']['dataset']))[:]:
+    l = l + [stats_activity['activities-elevation-intraday']['dataset'][i]['value']]
+
+len(l)
+sum(l)
+
+
+stats_activity = authd_client.intraday_time_series('activities/minutesLightlyActive', base_date=date,
+                                                   detail_level='1min', start_time='00:00',
+                                                   end_time='23:59')
+
+stats_activity = authd_client.intraday_time_series('activities/minutesSedentary', base_date=date,
+                                                   detail_level='1min', start_time='00:00',
+                                                   end_time='23:59')
+
+# want to be able to know when i'm active. so get below info. i already have the 
+# overall summary of steps and elevation. don't need to know when thesea are taking
+# place, right? as long as i know whe i'm active v sedentary so can compute resting hr
+# so get sedentary first?
+#activities/minutesSedentary
+#activities/minutesLightlyActive
+#activities/minutesFairlyActive
+#activities/minutesVeryActive
+
+
 def pickle_activity(authd_client, dates):
+    """Gets activity data. But for many days it doesn't have the times for which
+    I was active. But has summary data, e.g., number of steps and elevation gain.
+    So can't use this for knowing exactly when I was active vs. not, which would
+    be helpeful for computeing resting HR. But can get that info from intraday
+    below. And can use this summary data for getting at the impact of activity
+    and exercise on my health."""    
     for date in dates:
         date = str(date.year) + '-' + date.strftime('%m') + '-' + date.strftime('%d')
         print(date)
@@ -154,13 +212,76 @@ def pickle_activity(authd_client, dates):
         except:
             'no data on ' + date
 
+def pickle_sedentary(authd_client, dates):
+    """Gets the within-day time series for when i was sedentary (vs. active), 
+    coded in the data as 0 or 1 for each minute."""
+    for date in dates:
+        date = str(date.year) + '-' + date.strftime('%m') + '-' + date.strftime('%d')
+        print(date)
+        try:
+            stats_activity = authd_client.intraday_time_series('activities/minutesSedentary', base_date=date,
+                                                   detail_level='1min', start_time='00:00',
+                                                   end_time='23:59')
+            with open('sedentary'+date+'.pkl', 'wb') as picklefile:
+                pickle.dump(stats_activity, picklefile)
+        except:
+            'no data on ' + date
+
+def pickle_steps(authd_client, dates):
+    """ """
+    for date in dates:
+        date = str(date.year) + '-' + date.strftime('%m') + '-' + date.strftime('%d')
+        print(date)
+        try:
+            stats_activity = authd_client.intraday_time_series('activities/steps', base_date=date,
+                                                   detail_level='1min', start_time='00:00',
+                                                   end_time='23:59')
+            with open('steps'+date+'.pkl', 'wb') as picklefile:
+                pickle.dump(stats_activity, picklefile)
+        except:
+            'no data on ' + date
+
+def pickle_elevation(authd_client, dates):
+    """ """
+    for date in dates:
+        date = str(date.year) + '-' + date.strftime('%m') + '-' + date.strftime('%d')
+        print(date)
+        try:
+            stats_activity = authd_client.intraday_time_series('activities/elevation', base_date=date,
+                                                   detail_level='1min', start_time='00:00',
+                                                   end_time='23:59')
+            with open('elevation'+date+'.pkl', 'wb') as picklefile:
+                pickle.dump(stats_activity, picklefile)
+        except:
+            'no data on ' + date
+
 
 #dates = pd.date_range('08/10/2017', '08/10/2018', freq='D')
 #dates = pd.date_range('01/20/2018', '08/10/2018', freq='D')
 #dates = pd.date_range('07/20/2018', '08/10/2018', freq='D')
-#dates = pd.date_range('10/10/2016', '08/10/2017', freq='D')
-#dates = pd.date_range('04/14/2017', '08/10/2017', freq='D')
-#dates = pd.date_range('10/01/2016', '10/09/2016', freq='D')
-dates = pd.date_range('08/11/2018', '09/25/2018', freq='D')
+
+#dates = pd.date_range('10/01/2016', '01/28/2017', freq='D')
+#dates = pd.date_range('01/28/2017', '08/10/2017', freq='D')
+#dates = pd.date_range('05/31/2017', '09/25/2018', freq='D')
+dates = pd.date_range('09/15/2018', '09/25/2018', freq='D')
+
+# LEFT OFF
+
+
 
 pickle_activity(authd_client, dates)
+
+pickle_sedentary(authd_client, dates)
+
+pickle_steps(authd_client, dates)
+
+pickle_elevation(authd_client, dates)
+
+
+
+
+
+
+
+
+
