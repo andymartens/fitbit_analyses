@@ -1309,8 +1309,8 @@ df_hr_awake_sedentary.head()
 # add intercept to the resid for hr adjusted for time.
 df_hr_awake_sedentary['hr_adj_for_time'] = results.resid + df_hr_awake_sedentary['hr'].mean()  # 60.9
 
-df_hr_awake_sedentary['hr_adj_for_time'].hist(bins=20, color='dodgerblue', alpha=.3) 
 df_hr_awake_sedentary['hr'].hist(bins=20, color='orange', alpha=.3) 
+df_hr_awake_sedentary['hr_adj_for_time'].hist(bins=20, color='dodgerblue', alpha=.3) 
 plt.grid(False)
 
 df_hr_awake_sedentary['hr_adj_for_time'] = df_hr_awake_sedentary['hr_adj_for_time'].round(1)
@@ -1326,32 +1326,46 @@ plt.ylim(52,68)
 
 # wow - now hr looks pretty much completely unrelated to time of day. what i wanted.
 
+# LEFT OFF - 11/24
 
-
-
-
+# what should do - get either the min sedentary moving avg each hour or the mean 
+# sedentary moving avg each hour. then get mean for each day. why? not sure i have
+# a good rationale yet? but still think i should do. and can always compare to 
+# just the min. do i get the seasonal effect i see below with just taking the min
+# each day? (eventually should examine whether exercise/activity is repsonsible
+# for this seasonal effect.)
 
 # compute resting hr again but with this adjusted number
-df_hr_awake_6_to_8['hr_rolling_5min_adj'] = df_hr_awake_6_to_8['hr_resting_adj'].rolling(window='10min', min_periods=10).mean()
-df_resting_hr_by_day_adj = df_hr_awake_6_to_8.groupby('date')['hr_rolling_5min_adj'].min().reset_index()
-df_resting_hr_by_day_adj.rename(columns={'hr_rolling_5min_adj':'resting_hr_adj'}, inplace=True)
+df_hr_awake_sedentary['hr_rolling_adj'] = df_hr_awake_sedentary['hr_adj_for_time'].rolling(window='10min', min_periods=10).mean()
 
-df_resting_hr_by_day_adj['resting_hr_adj'].hist(alpha=.6, bins=20)
+df_resting_hr_by_day_adj = df_hr_awake_sedentary.groupby('date')['hr_rolling_adj'].min().reset_index()
+df_resting_hr_by_day_adj.rename(columns={'hr_rolling_adj':'min_hr_adj'}, inplace=True)
+
+df_resting_hr_by_day_adj['min_hr_adj'].hist(alpha=.6, bins=20)
 plt.grid(False)
 
+df_resting_hr_by_day_adj['min_hr_week'] = df_resting_hr_by_day_adj['min_hr_adj'].rolling(window=7).mean()
+df_resting_hr_by_day_adj['min_hr_month'] = df_resting_hr_by_day_adj['min_hr_adj'].rolling(window=30, min_periods=7).mean()
+df_resting_hr_by_day_adj['min_hr_3_month'] = df_resting_hr_by_day_adj['min_hr_adj'].rolling(window=90, min_periods=7).mean()
 
-df_resting_hr_by_day_adj['resting_hr_week'] = df_resting_hr_by_day_adj['resting_hr_adj'].rolling(window=7).mean()
-df_resting_hr_by_day_adj['resting_hr_month'] = df_resting_hr_by_day_adj['resting_hr_adj'].rolling(window=30).mean()
-resting_hr_list = df_resting_hr_by_day_adj['resting_hr_adj'].values
+resting_hr_list = df_resting_hr_by_day_adj['min_hr_adj'].values
 resting_hr_list = np.sort(resting_hr_list)
 resting_hr_list = list(resting_hr_list)
 resting_hr_list[:10]
 resting_hr_list[-10:]
-df_resting_hr_by_day_adj = df_resting_hr_by_day_adj.sort_values(by='resting_hr_adj')
+df_resting_hr_by_day_adj = df_resting_hr_by_day_adj.sort_values(by='min_hr_adj')
 
+sns.relplot(x='date', y='min_hr_adj', data=df_resting_hr_by_day_adj, kind='line')  # the ci takes forever
+sns.relplot(x='date', y='min_hr_week', data=df_resting_hr_by_day_adj, kind='line')  # the ci takes forever
+sns.relplot(x='date', y='min_hr_month', data=df_resting_hr_by_day_adj, kind='line')  # the ci takes forever
+sns.relplot(x='date', y='min_hr_3_month', data=df_resting_hr_by_day_adj, kind='line')  # the ci takes forever
+plt.xticks(rotation=30)
 
+g = sns.relplot(x='date', y='min_hr_month', data=df_resting_hr_by_day_adj, kind='line')  # the ci takes forever
+g.fig.autofmt_xdate()
 
-
+g = sns.relplot(x='date', y='min_hr_2_month', data=df_resting_hr_by_day_adj, kind='line')  # the ci takes forever
+g.fig.autofmt_xdate()
 
 
 
