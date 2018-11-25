@@ -564,8 +564,10 @@ sns.countplot(x='hour', data=df_resting_hr_merged, color='dodgerblue', alpha=.7)
 
 # what's the association between the minimum hr and hour?
 sns.relplot(x='hour', y='hr_rolling_5min', data=df_resting_hr_merged, kind='line')
+
 sns.lmplot(x='hour', y='hr_rolling_5min', data=df_resting_hr_merged, 
            lowess=True, scatter_kws={'alpha':.01})
+
 sns.barplot(x='hour', y='hr_rolling_5min', data=df_resting_hr_merged, 
             color='dodgerblue', alpha=.7, errcolor='grey')
 plt.ylabel('resting hr')
@@ -1004,54 +1006,6 @@ sns.lmplot(x='resting_prior_and_today_hr', y='fibit_resting_hr_measure',
 # way to show that hr during sleep isn't like hr normally?
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # what time of day am i seeing the minimum hr? esp the ones at the extremes.
 # the extremes are suspicious. esp the super low ones. might suggest outlier
 # values that i should remove using the smoothing technique in the jup nb.
@@ -1105,7 +1059,6 @@ plt.ylim(40,80)
 plt.xlim(5,21)
 
 
-
 sns.lmplot(x='hour', y='hr', data=df_hr[(df_hr['hour']>=6) & (df_hr['hour']<=20)], 
                                         ci=None, scatter_kws={'alpha':.001}, order=2)
 plt.ylim(40,80)
@@ -1125,24 +1078,21 @@ sns.relplot(x='hour', y='hr', data=df_hr[(df_hr['hour']>=6) & (df_hr['hour']<=20
 ax2 = ax.twinx()
 sns.plt.show()
 
-sns.regplot(x='hour', y='hr', data=df_hr[(df_hr['hour']>=6) & (df_hr['hour']<=20)], order=2)
+#sns.regplot(x='hour', y='hr', data=df_hr[(df_hr['hour']>=6) & (df_hr['hour']<=20)], order=2)
 
 
 fig, ax = plt.subplots()
 sns.regplot(x='hour', y='hr', data=df_hr[(df_hr['hour']>=6) & (df_hr['hour']<=20)], 
                                          order=2, ci=None, ax=ax, scatter_kws={'alpha':0})
+plt.ylim(40,80)
 sns.relplot(x='hour', y='hr', data=df_hr[(df_hr['hour']>=6) & (df_hr['hour']<=20)], 
                                          kind='line', ci=None, ax=ax)
 plt.ylim(40,80)
-
-
 
 #sns.lmplot(x='hour', y='hr', data=df_hr[(df_hr['hour']>=6) & (df_hr['hour']<=20)], 
 #                                        ci=None, scatter_kws={'alpha':.002}, order=3)
 #plt.ylim(40,80)
 #plt.xlim(5,21)
-
-
 
 hour_list = list(range(0,26,2))
 hour_string_list = [str(hour) for hour in hour_list]
@@ -1194,6 +1144,8 @@ df_hr_awake_6_to_8 = map_sedentary_data_onto_df(df_hr_awake_6_to_8, datetime_to_
 
 
 len(datetime_to_sedentary_dict)
+len(df_hr_awake_6_to_8)
+
 df_hr_awake_6_to_8.head()
 df_hr_awake_6_to_8.tail()
 df_hr_awake_6_to_8[df_hr_awake_6_to_8['sedentary'].isnull()]
@@ -1215,6 +1167,201 @@ plt.ylim(50,100)
 g = sns.relplot(x='hour', y='hr', data=df_hr_awake_6_to_8, 
                 kind='line', ci=None, hue='sedentary')  # the ci takes forever
 plt.ylim(50,100)
+
+df_hr_awake_6_to_8[100000:100050]
+# how to take out times adjacent to non-sedendary times?
+# foward and backward lag. of...5 min?
+df_hr_awake_6_to_8['sedentary_lag_1'] = df_hr_awake_6_to_8['sedentary'].shift(1)
+df_hr_awake_6_to_8['sedentary_lag_2'] = df_hr_awake_6_to_8['sedentary'].shift(2)
+df_hr_awake_6_to_8['sedentary_lag_3'] = df_hr_awake_6_to_8['sedentary'].shift(3)
+df_hr_awake_6_to_8['sedentary_lag_4'] = df_hr_awake_6_to_8['sedentary'].shift(4)
+df_hr_awake_6_to_8['sedentary_lag_5'] = df_hr_awake_6_to_8['sedentary'].shift(5)
+df_hr_awake_6_to_8['sedentary_lag_6'] = df_hr_awake_6_to_8['sedentary'].shift(6)
+df_hr_awake_6_to_8['sedentary_lag_7'] = df_hr_awake_6_to_8['sedentary'].shift(7)
+df_hr_awake_6_to_8['sedentary_lag_8'] = df_hr_awake_6_to_8['sedentary'].shift(8)
+df_hr_awake_6_to_8['sedentary_lag_9'] = df_hr_awake_6_to_8['sedentary'].shift(9)
+df_hr_awake_6_to_8['sedentary_lag_10'] = df_hr_awake_6_to_8['sedentary'].shift(11)
+df_hr_awake_6_to_8['sedentary_lag_11'] = df_hr_awake_6_to_8['sedentary'].shift(12)
+df_hr_awake_6_to_8['sedentary_lag_12'] = df_hr_awake_6_to_8['sedentary'].shift(13)
+df_hr_awake_6_to_8['sedentary_lag_13'] = df_hr_awake_6_to_8['sedentary'].shift(14)
+df_hr_awake_6_to_8['sedentary_lag_14'] = df_hr_awake_6_to_8['sedentary'].shift(15)
+df_hr_awake_6_to_8['sedentary_lag_15'] = df_hr_awake_6_to_8['sedentary'].shift(16)
+
+#df_hr_awake_6_to_8['sedentary_lag_neg_1'] = df_hr_awake_6_to_8['sedentary'].shift(-1)
+#df_hr_awake_6_to_8['sedentary_lag_neg_2'] = df_hr_awake_6_to_8['sedentary'].shift(-2)
+#df_hr_awake_6_to_8['sedentary_lag_neg_3'] = df_hr_awake_6_to_8['sedentary'].shift(-3)
+#df_hr_awake_6_to_8['sedentary_lag_neg_4'] = df_hr_awake_6_to_8['sedentary'].shift(-4)
+#df_hr_awake_6_to_8['sedentary_lag_neg_5'] = df_hr_awake_6_to_8['sedentary'].shift(-5)
+#df_hr_awake_6_to_8['sedentary_lag_neg_6'] = df_hr_awake_6_to_8['sedentary'].shift(-6)
+#df_hr_awake_6_to_8['sedentary_lag_neg_7'] = df_hr_awake_6_to_8['sedentary'].shift(-7)
+#df_hr_awake_6_to_8['sedentary_lag_neg_8'] = df_hr_awake_6_to_8['sedentary'].shift(-8)
+#df_hr_awake_6_to_8['sedentary_lag_neg_9'] = df_hr_awake_6_to_8['sedentary'].shift(-9)
+#df_hr_awake_6_to_8['sedentary_lag_neg_10'] = df_hr_awake_6_to_8['sedentary'].shift(-10)
+#df_hr_awake_6_to_8['sedentary_lag_neg_11'] = df_hr_awake_6_to_8['sedentary'].shift(-11)
+#df_hr_awake_6_to_8['sedentary_lag_neg_12'] = df_hr_awake_6_to_8['sedentary'].shift(-12)
+#df_hr_awake_6_to_8['sedentary_lag_neg_13'] = df_hr_awake_6_to_8['sedentary'].shift(-13)
+#df_hr_awake_6_to_8['sedentary_lag_neg_14'] = df_hr_awake_6_to_8['sedentary'].shift(-14)
+#df_hr_awake_6_to_8['sedentary_lag_neg_15'] = df_hr_awake_6_to_8['sedentary'].shift(-15)
+
+#df_hr_awake_6_to_8[['sedentary', 'sedentary_lag_neg_1', 'sedentary_lag_1']][:40]
+df_hr_awake_6_to_8[['sedentary', 'sedentary_lag_1', 'sedentary_lag_2']][:40]
+
+lags_to_include_list = list(range(1,16))
+lags_to_include_list = list(range(1,11))
+lags_to_include_list = list(range(1,6))
+
+def filter_out_non_sedentary(df_hr_awake_6_to_8, minutes):
+    """Keep only data when sedentary and when also sedentary x minutes beforehand."""
+    lags_to_include_list = list(range(1,minutes+1))
+    df_hr_awake_sedentary = df_hr_awake_6_to_8[df_hr_awake_6_to_8['sedentary']==1]
+    for lag in lags_to_include_list:
+        df_hr_awake_sedentary = df_hr_awake_sedentary[df_hr_awake_sedentary['sedentary_lag_'+str(lag)]==1]
+        #df_hr_awake_sedentary = df_hr_awake_sedentary[df_hr_awake_sedentary['sedentary_lag_neg_'+str(lag)]==1]
+    return df_hr_awake_sedentary
+
+df_hr_awake_sedentary = filter_out_non_sedentary(df_hr_awake_6_to_8, 15)
+
+print(len(df_hr_awake_sedentary), len(df_hr_awake_6_to_8))
+
+#sns.barplot(x='hour', y='hr', data=df_hr_awake_6_to_8, color='dodgerblue', alpha=.3, ci=None)
+sns.barplot(x='hour', y='hr', data=df_hr_awake_6_to_8[df_hr_awake_6_to_8['sedentary']==1], color='orange', alpha=.3, ci=None)
+sns.barplot(x='hour', y='hr', data=df_hr_awake_sedentary, color='dodgerblue', alpha=.3, ci=None)
+plt.ylim(40,70)
+
+# there are still ups and downs in hr, even when i just look at times that
+# i was sedentary, and even including only when i was sendentary and didn't
+# have any activity within 15 minutes before. this likely occurs because of 
+# eating and caffiene. eating: heart pumps blood to stomach for digestion.
+# but overall hr is lower when only use sedentary minutes. but essentially
+# this is saying that the increases in hr around 9am and 1pm and perhaps 7pm
+# aren't all due to walking. They still exist when sedentary. so presume due
+# to eating. But there does appear to be an uptick in hr around 5-6 that is 
+# due to walking, because it goes away when just look at sedentary minutes.
+# wish i could know when i'm eating. 
+
+# should i take the minimum hr each hour for each day and just use that data to get
+# my circadian rhytym. and then use that to adjust my resting hr measurments?
+# could do moving avg for each day and take the min of this each hour for each
+# day. then use this regression model to adjust each day's resting hr.
+
+df_hr_awake_sedentary.columns
+df_hr_awake_sedentary[['date', 'hour']]
+df_hr_awake_sedentary.groupby(['date', 'hour'])['hr'].min()
+df_hr_awake_sedentary.groupby(['date', 'hour'])['hr_rolling_5min'].min()
+
+hr_metric = 'hr'
+hr_metric = 'hr_rolling_5min'
+hr_values = np.round(sorted(list(df_hr_awake_sedentary[hr_metric].values)),0)
+hr_values[:150]
+
+df_hr_awake_sedentary = df_hr_awake_sedentary[df_hr_awake_sedentary['hr']>45]
+
+#df_hr_awake_sedentary.groupby(['date', 'hour'])['hr'].min()
+df_hr_min_hour = df_hr_awake_sedentary.groupby(['date', 'hour'])['hr_rolling_5min'].min().reset_index()
+
+
+g = sns.relplot(x='hour', y='hr_rolling_5min', data=df_hr_min_hour, 
+                kind='line', ci=None)  # the ci takes forever
+
+sns.lmplot(x='hour', y='hr_rolling_5min', data=df_hr_min_hour, scatter_kws={'alpha':.05})
+# so -- even using min each hour, still get increase in hr at 
+# a few points during the day. does this suggest that these peaks
+# are due to more than eating? either way, they're there no matter what.
+
+# given these peaks are there no matter what, using a linear regression to
+# adjust resting hr will tend to produce too low a resting hr because
+# the linear regression line is lifted by the peaks in hr. and since the
+# min hr each day is in the troughs, the hr will be adjusted downwards since
+# the min hr will be below the fitted regression line. BUT i can adjust for 
+# each hour individually. with dummy variables! and don't need to use the min
+# hr each hour each day, should just use the sedentary data each day to get. ok!
+
+df_hr_awake_sedentary['hour_string'] = df_hr_awake_sedentary['hour'].astype(str)
+
+df_hr_awake_sedentary = pd.concat([df_hr_awake_sedentary, 
+                                   pd.get_dummies(df_hr_awake_sedentary['hour_string'], 
+                                                  prefix='hour')], axis=1)
+
+df_hr_awake_sedentary.columns
+df_hr_awake_sedentary.dtypes
+df_hr_awake_sedentary.head()
+
+for variable in ['hour_5', 'hour_6', 'hour_7', 'hour_8', 'hour_9', 'hour_10', 
+                 'hour_11', 'hour_12', 'hour_13', 'hour_14', 'hour_15', 'hour_16', 
+                 'hour_17', 'hour_18', 'hour_19', 'hour_20']:
+    df_hr_awake_sedentary[variable] = df_hr_awake_sedentary[variable].astype(float)
+
+
+# need to take out one of them, e.g., hour_5
+results = smf.ols(formula = """ hr_rolling_5min ~ hour_6 + hour_7 + hour_8 + 
+                  hour_9 + hour_10 + hour_11 + hour_12 + hour_13 + hour_14 + hour_15 + 
+                  hour_16 + hour_17 + hour_18 + hour_19 + hour_20 """, data=df_hr_awake_sedentary).fit()
+print(results.summary())
+
+results = smf.ols(formula = """ hr ~ hour_6 + hour_7 + hour_8 + 
+                  hour_9 + hour_10 + hour_11 + hour_12 + hour_13 + hour_14 + hour_15 + 
+                  hour_16 + hour_17 + hour_18 + hour_19 + hour_20 """, data=df_hr_awake_sedentary).fit()
+print(results.summary())
+
+df_hr_awake_sedentary.head()
+
+# think a bit more. should the dv here be hr or hr moving avg?
+# add intercept to the resid for hr adjusted for time.
+df_hr_awake_sedentary['hr_adj_for_time'] = results.resid + df_hr_awake_sedentary['hr'].mean()  # 60.9
+
+df_hr_awake_sedentary['hr_adj_for_time'].hist(bins=20, color='dodgerblue', alpha=.3) 
+df_hr_awake_sedentary['hr'].hist(bins=20, color='orange', alpha=.3) 
+plt.grid(False)
+
+df_hr_awake_sedentary['hr_adj_for_time'] = df_hr_awake_sedentary['hr_adj_for_time'].round(1)
+df_hr_awake_sedentary[['time', 'hr', 'hr_adj_for_time']]
+
+g = sns.relplot(x='hour', y='hr', data=df_hr_awake_sedentary, 
+                kind='line', ci=None)  # 
+plt.ylim(52,68)
+
+g = sns.relplot(x='hour', y='hr_adj_for_time', data=df_hr_awake_sedentary, 
+                kind='line', ci=None)  # 
+plt.ylim(52,68)
+
+# wow - now hr looks pretty much completely unrelated to time of day. what i wanted.
+
+
+
+
+
+
+# compute resting hr again but with this adjusted number
+df_hr_awake_6_to_8['hr_rolling_5min_adj'] = df_hr_awake_6_to_8['hr_resting_adj'].rolling(window='10min', min_periods=10).mean()
+df_resting_hr_by_day_adj = df_hr_awake_6_to_8.groupby('date')['hr_rolling_5min_adj'].min().reset_index()
+df_resting_hr_by_day_adj.rename(columns={'hr_rolling_5min_adj':'resting_hr_adj'}, inplace=True)
+
+df_resting_hr_by_day_adj['resting_hr_adj'].hist(alpha=.6, bins=20)
+plt.grid(False)
+
+
+df_resting_hr_by_day_adj['resting_hr_week'] = df_resting_hr_by_day_adj['resting_hr_adj'].rolling(window=7).mean()
+df_resting_hr_by_day_adj['resting_hr_month'] = df_resting_hr_by_day_adj['resting_hr_adj'].rolling(window=30).mean()
+resting_hr_list = df_resting_hr_by_day_adj['resting_hr_adj'].values
+resting_hr_list = np.sort(resting_hr_list)
+resting_hr_list = list(resting_hr_list)
+resting_hr_list[:10]
+resting_hr_list[-10:]
+df_resting_hr_by_day_adj = df_resting_hr_by_day_adj.sort_values(by='resting_hr_adj')
+
+
+
+
+
+
+
+#g = sns.relplot(x='hour', y='hr', data=df_hr_awake_sedentary, 
+#                kind='line', ci=None)  # the ci takes forever
+#plt.ylim(40,80)
+#
+#g = sns.relplot(x='hour', y='hr', data=df_hr_awake_6_to_8[df_hr_awake_6_to_8['sedentary']==1], 
+#                kind='line', ci=None)  # the ci takes forever
+#plt.ylim(40,80)
 
 
 
