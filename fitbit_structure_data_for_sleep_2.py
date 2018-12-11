@@ -9,6 +9,19 @@ Alcohol on HR while asleep (presented at Google).
 
 """
 
+## ===============================================================
+## save df with sedentary hr mean ea day as measure of resting hr
+## computed by getting the mean sedentary hr each hour and then taking
+## the average of these hourly measurements
+#df_sedentary_hr_mean_day.to_pickle('df_sedentary_hr_mean_day.pkl')
+## save df with minimum sedentary hr mean ea day as measure of resting hr
+## computed by getting the minium sedentary hr each hour and then taking
+## the average of these hourly measurements
+#df_minimum_hr_mean_day.to_pickle('df_minimum_hr_mean_day.pkl')
+
+# explore that lip just before waking. is there a lot of variability in that?
+## ===============================================================
+
 
 #cd \\chgoldfs\253Broadway\PrivateFiles\amartens\hr\hr_sleep_data\fitbit_data2
 cd /Users/charlesmartens/Documents/projects/fitbit_data
@@ -467,11 +480,17 @@ df_daily_qs_w_alcohol_from_6_1_17 = df_daily_qs_w_alcohol[df_daily_qs_w_alcohol[
 df_daily_qs_w_alcohol_from_6_1_17[['date_prior', 'alcohol']]
 
 # alt date to alcohol dict starting a bit later
-date_to_alcohol_dict = dict(zip(df_daily_qs_w_alcohol_from_6_1_17['date_prior'], df_daily_qs_w_alcohol_from_6_1_17['alcohol']))
-#date_to_alcohol_dict = dict(zip(df_daily_qs['date_prior'], df_daily_qs['alcohol']))
+#date_to_alcohol_dict = dict(zip(df_daily_qs_w_alcohol_from_6_1_17['date_prior'], df_daily_qs_w_alcohol_from_6_1_17['alcohol']))
+date_to_alcohol_dict = dict(zip(df_daily_qs['date_prior'], df_daily_qs['alcohol']))
 df_sleep['alcohol'] = df_sleep['date_sleep'].map(date_to_alcohol_dict)
 len(df_sleep)  # 725079
 len(df_sleep['date_sleep'].unique())  # 708
+len(df_sleep[df_sleep['alcohol'].notnull()])  # 708
+df_test = df_sleep.groupby('date_sleep')['alcohol'].mean()
+len(df_test[df_test.notnull()])  # 480 days w alcohol ratings
+
+df_daily_qs['alcohol_type'].unique()
+date_to_alcohol_type_dict = dict(zip(df_daily_qs['date_prior'], df_daily_qs['alcohol_type']))
 
 # truncate so only alcohol days
 df_sleep = df_sleep[df_sleep['alcohol'].notnull()]
@@ -751,14 +770,14 @@ sns.despine()
 
 
 # over time?
-#df_for_sleep_stats.head()
-#df_for_sleep_stats = df_for_sleep_stats.reset_index()
-#df_for_sleep_stats.rename(columns={0:'sleep_hours'}, inplace=True)
-#sns.relplot(x='date_sleep', y='sleep_hours', 
-#            data=df_for_sleep_stats, kind='line')
-#plt.plot(df_for_sleep_stats['date_sleep'], df_for_sleep_stats['sleep_hours'].rolling(window=30).mean())
+df_for_sleep_stats.head()
+df_for_sleep_stats = df_for_sleep_stats.reset_index()
+df_for_sleep_stats.rename(columns={0:'sleep_hours'}, inplace=True)
+sns.relplot(x='date_sleep', y='sleep_hours', 
+            data=df_for_sleep_stats, kind='line')
 
-
+plt.plot(df_for_sleep_stats['date_sleep'], df_for_sleep_stats['sleep_hours'].rolling(window=30).mean())
+plt.xticks(rotation=30)
 
 # compute rolling mean here or after resampling? pretty sure that resampling
 # won't change the number of rows per session (might be code below or above
@@ -892,7 +911,6 @@ len(df_sleep_8_to_11_resampled)
 df_date = df_sleep_8_to_11_resampled[df_sleep_8_to_11_resampled['date_sleep']==date]
 len(df_date)  # all works
 
-
 df_sleep_8_to_11_resampled[df_sleep_8_to_11_resampled['hr']==36]
 
 
@@ -1014,6 +1032,7 @@ sns.despine()
 
 
 # for present
+len(df_sleep_8_to_11_resampled['date_sleep'].unique())
 # overlay smoothed for many nights
 alpha_level = .075
 width_for_line = 1
@@ -1354,7 +1373,7 @@ print(results.summary())
 # get sleep onset time. (and length of sleep.)
 # get dict of date to start sleep time. could filter to first row for ea date
 # 
-'start_sleep'
+# 'start_sleep'
 
 df_start_sleep_time = df_sleep_8_to_11_resampled.groupby('date_sleep').head(1).reset_index()
 df_start_sleep_time = df_start_sleep_time[['date_sleep', 'date_time', 'date_time_bogus']]
@@ -1388,6 +1407,7 @@ df_hr_mean['min_asleep'].hist()
 df_hr_mean['min_asleep'].mean()/60
 
 sns.lmplot(x='min_asleep', y='hr_mean', data=df_hr_mean, lowess=True)
+sns.lmplot(x='min_asleep', y='hr_mean', data=df_hr_mean[df_hr_mean['min_asleep']<700], lowess=True)
 
 
 results = smf.ols(formula = """hr_mean ~ alcohol + tue + wed + thu + fri + 
@@ -1426,10 +1446,11 @@ autocorrelation_plot(hr_series)
 autocorrelation_plot(alcohol_series)
 
 autocorrelation_plot(hr_series)
-plt.xlim(1,25)
-
+plt.xlim(1,100)
+plt.ylim(-.5,.5)
 autocorrelation_plot(alcohol_series)
-plt.xlim(1,25)
+plt.xlim(1,100)
+plt.ylim(-.5,.5)
 
 # but really i want the partial autocorrelation: The partial 
 # autocorrelation at lag k is the correlation that results 
@@ -1648,6 +1669,35 @@ plt.ylim(45,60)
 sns.despine()
 
 
+# look at distribution of hr on nights when drank vs not. 
+# wider distrib w alcohol, like the medium post?
+df_hr_mean.columns
+df_hr_mean[['hr_mean', 'alcohol', 'alcohol_dichot']].corr()
+
+i = 4
+df_hr_mean[df_hr_mean['alcohol']==i]['hr_mean'].hist(bins=10, alpha=.6)
+plt.grid(False)
+plt.xlim(45,70)
+
+df_hr_mean.groupby('alcohol_tertile')['hr_mean'].std() 
+df_hr_mean.groupby('alcohol')['hr_mean'].std() 
+
+df_hr_mean.groupby('alcohol_tertile')['hr_mean'].hist(bins=8, 
+                  alpha=.5, normed=True)
+plt.grid(False)
+
+plt.hist(df_hr_mean.groupby('alcohol_tertile')['hr_mean'].apply(lambda x: x.hist(normed=True, 
+         bins=8, alpha=.5)))
+plt.grid(False)
+
+sns.violinplot(x='alcohol', y='hr_mean', data=df_hr_mean, alpha=.6)
+
+# all these suggest that after 1 drink the stan dev / variance really does go up
+# though haven't done a statistical test. but this might suggest moderators 
+# of effects of alcohol on hr. sometimes hr is really high avter 2+ drinks
+# and sometimes it's not. the cross-validation heterogeneity test might be
+# good to do here.
+
 
 # for present
 # full model
@@ -1726,11 +1776,11 @@ len(df_hr_mean['date_sleep'].unique())
 
 #mean_cov_1 = df_hr_mean['month_ts'].mean()
 
-y_hr_drinks_0 = intercept + coef_cov_1*mean_cov_1 + drink_1*0 + drink_2*0 + drink_3*0 + drink_4*0 
-y_hr_drinks_1 = intercept + coef_cov_1*mean_cov_1 + drink_1*1 + drink_2*0 + drink_3*0 + drink_4*0 
-y_hr_drinks_2 = intercept + coef_cov_1*mean_cov_1 + drink_1*0 + drink_2*1 + drink_3*0 + drink_4*0 
-y_hr_drinks_3 = intercept + coef_cov_1*mean_cov_1 + drink_1*0 + drink_2*0 + drink_3*1 + drink_4*0 
-y_hr_drinks_4 = intercept + coef_cov_1*mean_cov_1 + drink_1*0 + drink_2*0 + drink_3*0 + drink_4*1 
+#y_hr_drinks_0 = intercept + coef_cov_1*mean_cov_1 + drink_1*0 + drink_2*0 + drink_3*0 + drink_4*0 
+#y_hr_drinks_1 = intercept + coef_cov_1*mean_cov_1 + drink_1*1 + drink_2*0 + drink_3*0 + drink_4*0 
+#y_hr_drinks_2 = intercept + coef_cov_1*mean_cov_1 + drink_1*0 + drink_2*1 + drink_3*0 + drink_4*0 
+#y_hr_drinks_3 = intercept + coef_cov_1*mean_cov_1 + drink_1*0 + drink_2*0 + drink_3*1 + drink_4*0 
+#y_hr_drinks_4 = intercept + coef_cov_1*mean_cov_1 + drink_1*0 + drink_2*0 + drink_3*0 + drink_4*1 
 
 # get se from the reults. se for coefs
 # could get the coefs and compute again with adding the se and substracting the se from coefs to get hr means
@@ -1857,7 +1907,6 @@ ax.legend(['No drinks', '1 drink', '2+ drinks'], fontsize=22)
 
 
 # present
-# something is wrong w this. red isn't gong to 0.
 fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(12,6), dpi=80)
 sns.relplot(x='minutes_from_waking', y='hr_interpolate_clean', 
             data=df_asleep,  # .sample(n=1000), 
@@ -1886,8 +1935,239 @@ ax.invert_xaxis()
 #sns.despine()
 
 
-
 # explore that lip just before waking. is there a lot of variability in that?
+# does that lip appear every time i wake up during the night?
+# is it possibe that this is awake time that the fitbit mis-labelled as asleep?
+# should look at the raw hr in case the smoothed has a lip because of awake times?
+df_asleep.shape
+df_asleep.head()
+df_asleep.tail()
+df_asleep['minutes_from_waking'].hist(alpha=.75)
+plt.grid(False)
+
+df_asleep_final_hour = df_asleep[df_asleep['minutes_from_waking']<.5]
+df_asleep_final_hour.columns
+
+# overlay many nights
+alpha_level = .3
+width_for_line = 3
+yticks = list(range(40,80,5))
+yticklabels = [str(tick) for tick in yticks]
+fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10,6), dpi=80)
+for date in df_asleep_final_hour['date_sleep'].unique()[30:35]:
+    df_date = df_asleep_final_hour[df_asleep_final_hour['date_sleep']==date]
+    plt.plot(df_date['minutes_from_waking'], df_date['hr_interpolate_clean'],  # hr_interpolate_clean is appropriate here. it's basically raw data. hr_rolling_30_min
+             alpha=alpha_level, linewidth=width_for_line)  # color='green', 
+ax.set_xlabel('Number of Hours From Waking', fontsize=26)
+ax.set_ylabel('Heart Rate', fontsize=26)
+ax.set_xlim(0,.5)
+ax.set_ylim(43,72)
+ax.xaxis.set_tick_params(labelsize=22)
+ax.yaxis.set_tick_params(labelsize=22)
+ax.invert_xaxis()
+sns.despine()
+
+
+fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10,6), dpi=80)
+sns.relplot(x='minutes_from_waking', y='hr_interpolate_clean', 
+            data=df_asleep_final_hour,  # .sample(n=1000), 
+            kind='line', ci=95, alpha=.5, ax=ax)
+yticks = list(range(50,65,5))
+yticklabels = [str(tick) for tick in yticks]
+ax.set_yticks(yticks)
+ax.set_yticklabels(yticklabels)
+ax.xaxis.set_tick_params(labelsize=22)
+ax.yaxis.set_tick_params(labelsize=22)
+ax.set_xlabel('Number of Hours From Waking', fontsize=26)
+ax.set_ylabel('Heart Rate', fontsize=26)
+ax.set_xlim(0,.05)
+ax.set_ylim(49,61)  
+ax.invert_xaxis()
+
+# i guess this plot above suggests that there reall is a lip starting 
+# at about .015. that's a little under 1 minute. So could take the final
+# minute as "the lip" and could cut it off and/or use it as a variable.
+
+# but that's where the avg lip starts. there's variation.
+# .1 is 6 min before waking. and sometimes the lip starts then -
+# i.e., the quick increase in hr starts then. seems that if fitbit
+# is mislabeling awake vs. asleep here, that would only see the spike
+# in hr for the final 1-2 mins. this suggests to me that the increase
+# in hr that is this "lip" is happening when I'm asleep. but actually, 
+# still can't be sure. i still could be just lying there awake for 5-10 
+# min but so still that the fitbit things I'm asleep. either way, 
+# I like the idea of usig the size of this lip as an IV to see if it
+# predict things.
+
+# when i look at just a handful of timeseries in isolation, the lips
+# look less like an artifcact and more like something real.
+
+# unless i do a little experiment, and note the exact time i wake
+# for a couple weeks. and then compare to what fitbit says, i can't
+# tell right now if these final moments in the sleep data in which 
+# i get this lip -- this fast incrase in hr -- is happening when i'm 
+# alseep or because i'm waking and fitbit is labelling it as me being
+# asleep still. it's just a tiny bit of data, so it doesn't matter
+# at the moment for anys. But wouldn't hurt to include the size of the
+# lip as an IV to see if this means anything for health the next day
+# or sleep quality. 
+
+# like the idea of doing this experiment. if the lip is just an artifact
+# of the fitbit asleep-awake labelling algo, then the lip isn't really
+# interesting. but if it's not and the lip is happening when i'm asleep,
+# this is a phenoenon that's fascinating to me. it means that in my sleep,
+# while i'm unconscsious, i'm quickly getting ready to wake.
+
+
+# does type of alcohol matter?
+df_asleep['alcohol_type'] = df_asleep['date_sleep'].map(date_to_alcohol_type_dict)
+df_asleep_alcohol = df_asleep[df_asleep['alcohol']==1]
+df_asleep_alcohol['alcohol_type'].value_counts()
+df_asleep_alcohol = df_asleep_alcohol[df_asleep_alcohol['alcohol_type'].isin(['Beer', 'Red wine', 'Hard alcohol'])]
+
+fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10,6), dpi=80)
+sns.relplot(x='minutes_asleep', y='hr_interpolate_clean', 
+            data=df_asleep_alcohol,  # .sample(n=1000), 
+            kind='line', ci=90, hue='alcohol_type', alpha=.5,
+            #palette=['orange', 'red'], 
+            #hue_order=['1','2'], 
+            ax=ax)
+yticks = list(range(50,75,5))
+yticklabels = [str(tick) for tick in yticks]
+ax.set_yticks(yticks)
+ax.set_yticklabels(yticklabels)
+ax.xaxis.set_tick_params(labelsize=22)
+ax.yaxis.set_tick_params(labelsize=22)
+ax.set_xlabel('Number of Hours From Sleep Onset', fontsize=26)
+ax.set_ylabel('Heart Rate', fontsize=26)
+ax.set_xlim(0,8)
+ax.set_ylim(49,71) 
+ax.legend(fontsize=22) 
+#ax.legend(['1 drink', '2+ drinks'], fontsize=22)
+
+# do in regression
+df_asleep['alcohol_type'].unique()
+
+results = smf.ols(formula = """hr_mean ~ alcohol +
+                  tue + wed + thu + fri + sat + sun + temp + month_ts + 
+                  start_sleep_time + hr_mean_lag1 + hr_mean_lag2 + 
+                  alcohol_lag1 + fun_lag1""", data=df_hr_mean).fit()
+print(results.summary())
+
+df_asleep['alcohol_type'].replace(np.nan, 'none', inplace=True)
+df_asleep['alcohol_type'].unique()
+df_asleep['beer'] = 0
+df_asleep.loc[df_asleep['alcohol_type'].str.contains('Beer'), 'beer'] = 1
+df_asleep['red_wine'] = 0
+df_asleep.loc[df_asleep['alcohol_type'].str.contains('Red wine'), 'red_wine'] = 1
+df_asleep['white_wine'] = 0
+df_asleep.loc[df_asleep['alcohol_type'].str.contains('White wine'), 'white_wine'] = 1
+df_asleep['mixed_drink'] = 0
+df_asleep.loc[df_asleep['alcohol_type'].str.contains('Mixed drink'), 'mixed_drink'] = 1
+df_asleep['hard_alcohol'] = 0
+df_asleep.loc[df_asleep['alcohol_type'].str.contains('Hard alcohol'), 'hard_alcohol'] = 1
+df_asleep['champaigne'] = 0
+df_asleep.loc[df_asleep['alcohol_type'].str.contains('Champaigne'), 'champaigne'] = 1
+
+for alcohol in ['beer', 'red_wine', 'white_wine', 'mixed_drink', 'hard_alcohol', 'champaigne']:
+    print(df_asleep[alcohol].value_counts(normalize=True))
+    print()
+
+df_hr_mean['alcohol_type'] = df_hr_mean['date_sleep'].map(date_to_alcohol_type_dict)
+df_hr_mean['alcohol_type'].replace(np.nan, 'none', inplace=True)
+df_hr_mean['beer'] = 0
+df_hr_mean.loc[df_hr_mean['alcohol_type'].str.contains('Beer'), 'beer'] = 1
+df_hr_mean['red_wine'] = 0
+df_hr_mean.loc[df_hr_mean['alcohol_type'].str.contains('Red wine'), 'red_wine'] = 1
+df_hr_mean['white_wine'] = 0
+df_hr_mean.loc[df_hr_mean['alcohol_type'].str.contains('White wine'), 'white_wine'] = 1
+df_hr_mean['mixed_drink'] = 0
+df_hr_mean.loc[df_hr_mean['alcohol_type'].str.contains('Mixed drink'), 'mixed_drink'] = 1
+df_hr_mean['hard_alcohol'] = 0
+df_hr_mean.loc[df_hr_mean['alcohol_type'].str.contains('Hard alcohol'), 'hard_alcohol'] = 1
+df_hr_mean['champaigne'] = 0
+df_hr_mean.loc[df_hr_mean['alcohol_type'].str.contains('Champaigne'), 'champaigne'] = 1
+
+for alcohol in ['beer', 'red_wine', 'white_wine', 'mixed_drink', 'hard_alcohol', 'champaigne']:
+    print(df_hr_mean[alcohol].value_counts(normalize=True))
+    print()
+
+results = smf.ols(formula = """hr_mean ~ alcohol +
+                  tue + wed + thu + fri + sat + sun + temp + month_ts + 
+                  start_sleep_time + hr_mean_lag1 + hr_mean_lag2 + 
+                  alcohol_lag1 + fun_lag1 + beer + red_wine + 
+                  white_wine + mixed_drink + hard_alcohol""", data=df_hr_mean[df_hr_mean['alcohol']>0]).fit()
+print(results.summary())
+
+df_hr_mean_alcohol_1 = df_hr_mean[df_hr_mean['alcohol']==1]
+
+results = smf.ols(formula = """hr_mean ~
+                  tue + wed + thu + fri + sat + sun + temp + month_ts + 
+                  start_sleep_time + hr_mean_lag1 + hr_mean_lag2 + 
+                  alcohol_lag1 + fun_lag1 + beer + red_wine + 
+                  hard_alcohol""", data=df_hr_mean_alcohol_1).fit()
+print(results.summary())
+
+df_hr_mean_alcohol_1['alcohol_type_1_drink'] = 'other'
+df_hr_mean_alcohol_1.loc[df_hr_mean_alcohol_1['red_wine']==1, 'alcohol_type_1_drink'] = 'red_wine'
+df_hr_mean_alcohol_1.loc[df_hr_mean_alcohol_1['hard_alcohol']==1, 'alcohol_type_1_drink'] = 'hard_alcohol'
+df_hr_mean_alcohol_1.loc[df_hr_mean_alcohol_1['beer']==1, 'alcohol_type_1_drink'] = 'beer'
+
+sns.barplot(x='alcohol_type_1_drink', y='hr_mean', data=df_hr_mean_alcohol_1, 
+            color='dodgerblue', alpha=.7)
+plt.ylim(40,57)
+# raw means show that hard alcohol may be worst for hr
+# but when control for all other vars above, no difference statistically
+
+
+# -------------------------------------------------------------------
+# incorp resting hr measures to help validate sleep quality metric(s)
+
+## save df with sedentary hr mean ea day as measure of resting hr
+## computed by getting the mean sedentary hr each hour and then taking
+## the average of these hourly measurements
+df_sedentary_hr_mean_day = pd.read_pickle('df_sedentary_hr_mean_day.pkl')
+## save df with minimum sedentary hr mean ea day as measure of resting hr
+## computed by getting the minium sedentary hr each hour and then taking
+## the average of these hourly measurements
+df_minimum_hr_mean_day = pd.read_pickle('df_minimum_hr_mean_day.pkl')
+
+date_to_hr_resting_dict = dict(df_sedentary_hr_mean_day)
+date_to_hr_resting_minimum_dict = dict(df_minimum_hr_mean_day)
+
+df_hr_mean.head()
+df_hr_mean.columns
+
+df_hr_mean['hr_rest'] = df_hr_mean['date_sleep'].map(date_to_hr_resting_dict)
+df_hr_mean['hr_rest_min'] = df_hr_mean['date_sleep'].map(date_to_hr_resting_minimum_dict)
+
+df_hr_mean[df_hr_mean['hr_rest'].isnull()]
+df_hr_mean[df_hr_mean['hr_rest_min'].isnull()]
+# just 5 days missing. seem like random days. ok.
+
+df_hr_mean['hr_rest_next_day'] = df_hr_mean['hr_rest'].shift(-1)
+df_hr_mean['hr_rest_min_next_day'] = df_hr_mean['hr_rest_min'].shift(-1)
+
+df_hr_mean[['hr_rest', 'hr_rest_min', 
+            'hr_rest_next_day', 'hr_rest_min_next_day', 
+            'hr_mean']].corr()
+# raw corr suggesting that sleeping hr might be more affected by prior 
+# day hr than it affects next day hr?! though both high corrs.
+
+plt.scatter(x='hr_mean', y='hr_rest_next_day', data=df_hr_mean, alpha=.25)
+
+sns.lmplot(x='hr_mean', y='hr_rest_next_day', data=df_hr_mean, 
+           scatter_kws={'alpha':.25}, x_partial='hr_rest', y_partial='hr_rest')
+
+
+
+# =========
+# LEFT OFF
+df_hr_mean.to_pickle('df_hr_mean_w_resting_hr.pkl')
+# =========
+
+
+
 
 # explore alcohol with other sleep metrics:
 # time, wakings, std, ? (freq band of sleep cycles? - wait)
@@ -1911,16 +2191,23 @@ sns.relplot(x='date_sleep', y='alseep_30sec', data=df_rows_asleep, kind='line')
 df_rows_asleep = df_rows_asleep.sort_values(by='date_sleep')
 
 df_rows_asleep.set_index('date_sleep', inplace=True)
-df_rows_asleep['time_asleep_rolling'] = df_rows_asleep['alseep_30sec'].rolling(window='60D').mean()
+df_rows_asleep['time_asleep_rolling'] = df_rows_asleep['alseep_30sec'].rolling(window='60D', min_periods=10).mean()
 df_rows_asleep['date_sleep'] = df_rows_asleep.index
 sns.relplot(x='date_sleep', y='time_asleep_rolling', data=df_rows_asleep, kind='line')
-# such a steep dropoff here. suspicious
+plt.xticks(rotation=30)
+sns.relplot(x='date_sleep', y='alseep_30sec', data=df_rows_asleep, kind='line')
+plt.xticks(rotation=30)
 
-df_rows_asleep['alcohol_rolling'] = df_rows_asleep['alcohol'].rolling(window='60D').mean()
-sns.relplot(x='date_sleep', y='alcohol_rolling', data=df_rows_asleep, kind='line')
+# delete this one outlier night?
+sorted(df_rows_asleep['alseep_30sec'].values)
+
+
 
 df_rows_asleep['alcohol'] = df_rows_asleep['date_sleep'].map(date_to_alcohol_dict)
 len(df_rows_asleep[df_rows_asleep['alcohol'].notnull()])
+
+df_rows_asleep['alcohol_rolling'] = df_rows_asleep['alcohol'].rolling(window='60D').mean()
+sns.relplot(x='date_sleep', y='alcohol_rolling', data=df_rows_asleep, kind='line')
 
 sns.countplot(x='alcohol', data=df_rows_asleep, alpha=.7, color='dodgerblue')
 df_rows_asleep['alcohol'].replace([4,5,6],[3,3,3], inplace=True)
@@ -2038,7 +2325,6 @@ plt.xticks(fontsize=14)
 plt.yticks(fontsize=14)
 sns.despine()
 
-
 df_hr_mean.reset_index(inplace=True)
 
 df_hr_mean[['energy', 'subj_sleep', 'fun', 'hr_mean', 'index']].corr()
@@ -2074,13 +2360,6 @@ results.pvalues.subj_sleep
 # hr from last night go above and beyond hr recently to predict fun
 # or change in fun.
 
-
-
-
-
-
-
-
 # corr matrix -- how are things all correlated?
 # does hr at night predict stuff the next day better than anything else?
 
@@ -2106,6 +2385,8 @@ results.pvalues.subj_sleep
 # -----------------------
 # -----------------------
 # -----------------------
+# EXTRAS BELOW
+
 # plot hr by time of day
 
 # filter so only those with 200+ records but why? why trust above that number?

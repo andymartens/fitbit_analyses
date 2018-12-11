@@ -5,15 +5,15 @@ Created on Sat Dec 24 16:23:34 2016
 @author: charlesmartens
 
 Anaylyses: 
-HR resting to help validate HR while asleep as measure of sleep quality.
-Examine other outcomes next day too, to validate and understand effects 
-of sleep quality on waking life.
+Develope resting HR metrics to help validate HR while asleep as measure of sleep 
+quality, as well as other measures of sleep quality. Examine other outcomes next 
+day too, to validate and understand effects of sleep quality on waking life.
 
 Think more about waking measures of health to validate sleep quality measurement
-using hr while asleep and other sleep quality possibilities. behavioral measures?
-Certainly i have my daily ratings. That's great. Anything else? What about activity
-data? Amount of physical activity could be interesting, as results of sleep quality 
-measures. How fast my HR descreases from activity to rest while waking? Anything else?
+using hr while asleep and other sleep quality possibilities. Behavioral measures?
+I have my daily ratings. That's great. Anything else? What about activity data? 
+Amount of physical activity could be interesting, as results of sleep quality. 
+How fast my HR descreases from activity to rest while waking? Anything else?
 
 """
 
@@ -1335,170 +1335,174 @@ plt.ylim(52,68)
 # each day? (eventually should examine whether exercise/activity is repsonsible
 # for this seasonal effect.)
 
-# compute resting hr again but with this adjusted number
-df_hr_awake_sedentary['hr_rolling_adj'] = df_hr_awake_sedentary['hr_adj_for_time'].rolling(window='10min', min_periods=10).mean()
+# get rolling mean. 
+df_hr_awake_sedentary['hr_rolling_adj_time'] = df_hr_awake_sedentary['hr_adj_for_time'].rolling(window='10min').mean()
 
-df_resting_hr_by_day_adj = df_hr_awake_sedentary.groupby('date')['hr_rolling_adj'].min().reset_index()
-df_resting_hr_by_day_adj.rename(columns={'hr_rolling_adj':'min_hr_adj'}, inplace=True)
+# get mean and min each hour
+df_hr_adj_by_hour = df_hr_awake_sedentary.groupby(['date', 'hour'])['hr_rolling_adj_time'].mean().reset_index()
+df_hr_adj_min_by_hour = df_hr_awake_sedentary.groupby(['date', 'hour'])['hr_rolling_adj_time'].min().reset_index()
+df_merge_mean_min_by_hour = pd.merge(df_hr_adj_by_hour, df_hr_adj_min_by_hour, on=['date', 'hour'])
+df_merge_mean_min_by_hour[['hr_rolling_adj_time_x', 'hr_rolling_adj_time_y']].corr()
+plt.scatter(df_merge_mean_min_by_hour['hr_rolling_adj_time_x'], 
+            df_merge_mean_min_by_hour['hr_rolling_adj_time_y'], 
+            alpha=.15, color='orange', s=50)
 
-df_resting_hr_by_day_adj['min_hr_adj'].hist(alpha=.6, bins=20)
-plt.grid(False)
+# now get mean ea day of ea hour
+df_sedentary_hr_mean_day = df_hr_adj_by_hour.groupby('date')['hr_rolling_adj_time'].mean().reset_index()
+df_minimum_hr_mean_day = df_hr_adj_min_by_hour.groupby('date')['hr_rolling_adj_time'].mean().reset_index()
+df_merge_mean_min_day = pd.merge(df_sedentary_hr_mean_day, df_minimum_hr_mean_day, on='date')
+df_merge_mean_min_day[['hr_rolling_adj_time_x', 'hr_rolling_adj_time_y']].corr()
+plt.scatter(df_merge_mean_min_day['hr_rolling_adj_time_x'], 
+            df_merge_mean_min_day['hr_rolling_adj_time_y'], 
+            alpha=.15, color='orange', s=50)
 
-df_resting_hr_by_day_adj['min_hr_week'] = df_resting_hr_by_day_adj['min_hr_adj'].rolling(window=7).mean()
-df_resting_hr_by_day_adj['min_hr_month'] = df_resting_hr_by_day_adj['min_hr_adj'].rolling(window=30, min_periods=7).mean()
-df_resting_hr_by_day_adj['min_hr_3_month'] = df_resting_hr_by_day_adj['min_hr_adj'].rolling(window=90, min_periods=7).mean()
-
-resting_hr_list = df_resting_hr_by_day_adj['min_hr_adj'].values
-resting_hr_list = np.sort(resting_hr_list)
-resting_hr_list = list(resting_hr_list)
-resting_hr_list[:10]
-resting_hr_list[-10:]
-df_resting_hr_by_day_adj = df_resting_hr_by_day_adj.sort_values(by='min_hr_adj')
-
-sns.relplot(x='date', y='min_hr_adj', data=df_resting_hr_by_day_adj, kind='line')  # the ci takes forever
-sns.relplot(x='date', y='min_hr_week', data=df_resting_hr_by_day_adj, kind='line')  # the ci takes forever
-sns.relplot(x='date', y='min_hr_month', data=df_resting_hr_by_day_adj, kind='line')  # the ci takes forever
-sns.relplot(x='date', y='min_hr_3_month', data=df_resting_hr_by_day_adj, kind='line')  # the ci takes forever
+sns.relplot(x='date', y='hr_rolling_adj_time', data=df_sedentary_hr_mean_day, kind='line')
+sns.relplot(x='date', y='hr_rolling_adj_time', data=df_minimum_hr_mean_day, kind='line')
 plt.xticks(rotation=30)
 
-g = sns.relplot(x='date', y='min_hr_month', data=df_resting_hr_by_day_adj, kind='line')  # the ci takes forever
-g.fig.autofmt_xdate()
+plt.plot(df_sedentary_hr_mean_day['date'], df_sedentary_hr_mean_day['hr_rolling_adj_time'], alpha=.6)
+plt.plot(df_minimum_hr_mean_day['date'], df_minimum_hr_mean_day['hr_rolling_adj_time'], alpha=.6)
 
-g = sns.relplot(x='date', y='min_hr_2_month', data=df_resting_hr_by_day_adj, kind='line')  # the ci takes forever
-g.fig.autofmt_xdate()
+df_sedentary_hr_mean_day = df_hr_adj_by_hour.groupby('date')['hr_rolling_adj_time'].mean()
+df_minimum_hr_mean_day = df_hr_adj_min_by_hour.groupby('date')['hr_rolling_adj_time'].mean()
+
+plt.plot(df_sedentary_hr_mean_day.rolling(window=30, center=True).mean(), alpha=.7)
+plt.plot(df_minimum_hr_mean_day.rolling(window=30, center=True).mean(), alpha=.7)
+plt.xticks(rotation=30)
+
+plt.plot(df_sedentary_hr_mean_day.rolling(window=7, center=True).mean(), alpha=.25)
+plt.plot(df_minimum_hr_mean_day.rolling(window=7, center=True).mean(), alpha=.25)
+plt.xticks(rotation=30)
+
+plt.plot(df_sedentary_hr_mean_day.rolling(window=60, center=True).mean(), alpha=.7)
+plt.plot(df_minimum_hr_mean_day.rolling(window=60, center=True).mean(), alpha=.7)
+plt.xticks(rotation=30)
+
+# these two metrics for measuring resting hr are really similar
+# save these metrics and can map them onto sleeq quality, includeing
+# hr while sleeping, that have saved elsewhere.
+
+# ===============================================================
+# save df with sedentary hr mean ea day as measure of resting hr
+# computed by getting the mean sedentary hr each hour and then taking
+# the average of these hourly measurements
+df_sedentary_hr_mean_day.to_pickle('df_sedentary_hr_mean_day.pkl')
+# save df with minumum sedentary hr mean ea day as measure of resting hr
+# computed by getting the miniumy sedentary hr each hour and then taking
+# the average of these hourly measurements
+df_minimum_hr_mean_day.to_pickle('df_minimum_hr_mean_day.pkl')
+# ===============================================================
 
 
 
-#g = sns.relplot(x='hour', y='hr', data=df_hr_awake_sedentary, 
-#                kind='line', ci=None)  # the ci takes forever
-#plt.ylim(40,80)
+
+## --------------------------
+#def open_activity_dict(date):
+#    date = str(date.year) + '-' + date.strftime('%m') + '-' + date.strftime('%d')
+#    try:
+#        with open('activity'+date+'.pkl', 'rb') as picklefile:
+#            activity_data_day_dict = pickle.load(picklefile)
+#    except:
+#        print(date)
+#        'no dict on ' + date
+#        print()
+#    return activity_data_day_dict
 #
-#g = sns.relplot(x='hour', y='hr', data=df_hr_awake_6_to_8[df_hr_awake_6_to_8['sedentary']==1], 
-#                kind='line', ci=None)  # the ci takes forever
-#plt.ylim(40,80)
-
-
-
-
-
-
-
-# --------------------------
-def open_activity_dict(date):
-    date = str(date.year) + '-' + date.strftime('%m') + '-' + date.strftime('%d')
-    try:
-        with open('activity'+date+'.pkl', 'rb') as picklefile:
-            activity_data_day_dict = pickle.load(picklefile)
-    except:
-        print(date)
-        'no dict on ' + date
-        print()
-    return activity_data_day_dict
-
-dates = pd.date_range('2016-10-01', '2018-09-25', freq='D')
-date = dates[407]
-activity_data_day_dict = open_activity_dict(date)
-activity_data_day_dict.keys()
-len(activity_data_day_dict['activities'])
-# lots of days without any specific activity data. why? check on site to see 
-# if none there too.
-
-activity_data_day_dict['activities'][0]
-activity_data_day_dict['activities'][1]
-
-activity_data_day_dict['activities'][0].keys()
-activity_data_day_dict['activities'][0]['originalStartTime']
-activity_data_day_dict['activities'][0]['startTime']
-activity_data_day_dict['activities'][0]['averageHeartRate']
-activity_data_day_dict['activities'][0]['elevationGain']
-activity_data_day_dict['activities'][0]['duration']  # same as orig duration unless modified?
-activity_data_day_dict['activities'][0]['originalDuration']  # in milliseconds
-activity_data_day_dict['activities'][0]['activeDuration']
-activity_data_day_dict['activities'][0]['activityName']
-
-# lots of days without timing of activity! so how to i get that
-# for those days when there's only summary data? is it recorded somewhere?
-activity_data_day_dict['summary'].keys()
-activity_data_day_dict['summary']['distance']
-activity_data_day_dict['summary']['elevation']
-activity_data_day_dict['summary']['floors']
-activity_data_day_dict['summary']['steps']
-
-
-activity_summary_to_date_dict = {'date':[], 'distance':[], 'elevation':[], 'steps':[]}
-
-def get_activity_summary_for_day_dict(activity_data_day_dict, activity_summary_to_date_dict, date):
-    activity_summary_to_date_dict['date'] = activity_summary_to_date_dict['date'] + [date]
-    activity_summary_to_date_dict['distance'] = activity_summary_to_date_dict['distance'] + [activity_data_day_dict['summary']['distance']]
-    activity_summary_to_date_dict['elevation'] = activity_summary_to_date_dict['elevation'] + [activity_data_day_dict['summary']['elevation']]
-    activity_summary_to_date_dict['steps'] = activity_summary_to_date_dict['steps'] + [activity_data_day_dict['summary']['steps']]
-    return activity_summary_to_date_dict
-
-activity_to_datetimes_dict = {'activity':[], 'datetime':[], 'elevation_gain':[]}
-
-def get_activity_info_from_one_activity_session(activity_data_day_dict, activity_to_datetimes_dict, i):
-    # want to put the activity data into ts by minute
-    start_time = activity_data_day_dict['activities'][i]['originalStartTime']
-    activity_date = start_time[:10]
-    activity_time = start_time[11:16]
-    # need to check to make sure i'm interpreting time of day correctly
-    start_time = pd.to_datetime(activity_date + ' ' + activity_time)
-    duration = np.round(activity_data_day_dict['activities'][i]['originalDuration']*.001/60)
-    times_in_activity = list(pd.date_range(start=start_time, periods=duration, freq='1min'))
-    activity_name = activity_data_day_dict['activities'][i]['activityName']
-    try:
-        elevation_gain = activity_data_day_dict['activities'][i]['elevationGain']
-        activity_to_datetimes_dict['elevation_gain'] = activity_to_datetimes_dict['elevation_gain'] + [elevation_gain]*len(times_in_actiity)
-    except:
-        print('no elevation gain for activity')
-        activity_to_datetimes_dict['elevation_gain'] = activity_to_datetimes_dict['elevation_gain'] + [np.nan]*len(times_in_actiity)
-    activity_to_datetimes_dict['activity'] = activity_to_datetimes_dict['activity'] + [activity_name]*len(times_in_actiity)
-    activity_to_datetimes_dict['datetime'] = activity_to_datetimes_dict['datetime'] + times_in_actiity
-    return activity_to_datetimes_dict
-
-i = 0
-activity_to_datetimes_dict = get_activity_info_from_one_activity_session(activity_data_day_dict, i)
-
-def get_activity_info_for_date_range(dates, activity_to_datetimes_dict, activity_summary_to_date_dict):
-    activity_to_datetimes_dict = {'activity':[], 'datetime':[], 'elevation_gain':[]}
-    for date in dates:
-        print(date)
-        activity_data_day_dict = open_activity_dict(date)
-        activity_summary_to_date_dict = get_activity_summary_for_day_dict(activity_data_day_dict, activity_summary_to_date_dict, date)
-        if len(activity_data_day_dict['activities']) > 0:
-            for i in range(len(activity_data_day_dict['activities'])):
-                activity_to_datetimes_dict = get_activity_info_from_one_activity_session(activity_data_day_dict, activity_to_datetimes_dict, i)
-        else:
-            print('no activity timing on', date)
-    return activity_to_datetimes_dict, activity_summary_to_date_dict
-
-dates = pd.date_range('2016-10-01', '2018-09-25', freq='D')
-dates = pd.date_range('2017-10-01', '2017-11-01', freq='D')
-activity_to_datetimes_dict = {'activity':[], 'datetime':[], 'elevation_gain':[]}
-activity_summary_to_date_dict = {'date':[], 'distance':[], 'elevation':[], 'steps':[]}
-
-activity_to_datetimes_dict, activity_summary_to_date_dict = get_activity_info_for_date_range(dates, activity_to_datetimes_dict, activity_summary_to_date_dict)
-
-df_activity = pd.DataFrame(activity_to_datetimes_dict)
-df_activity_summary = pd.DataFrame(activity_summary_to_date_dict)
-
-df_activity.columns
-df_activity['activity'].value_counts(normalize=True)
-
-df_activity_summary.columns
-df_activity_summary['steps'].hist(bins=25)
-df_activity_summary['elevation'].hist(bins=50)
-df_activity_summary['distance'].hist(bins=50)
-
-
-
-
-
-
-
-
-
-
+#dates = pd.date_range('2016-10-01', '2018-09-25', freq='D')
+#date = dates[407]
+#activity_data_day_dict = open_activity_dict(date)
+#activity_data_day_dict.keys()
+#len(activity_data_day_dict['activities'])
+## lots of days without any specific activity data. why? check on site to see 
+## if none there too.
+#
+#activity_data_day_dict['activities'][0]
+#activity_data_day_dict['activities'][1]
+#
+#activity_data_day_dict['activities'][0].keys()
+#activity_data_day_dict['activities'][0]['originalStartTime']
+#activity_data_day_dict['activities'][0]['startTime']
+#activity_data_day_dict['activities'][0]['averageHeartRate']
+#activity_data_day_dict['activities'][0]['elevationGain']
+#activity_data_day_dict['activities'][0]['duration']  # same as orig duration unless modified?
+#activity_data_day_dict['activities'][0]['originalDuration']  # in milliseconds
+#activity_data_day_dict['activities'][0]['activeDuration']
+#activity_data_day_dict['activities'][0]['activityName']
+#
+## lots of days without timing of activity! so how to i get that
+## for those days when there's only summary data? is it recorded somewhere?
+#activity_data_day_dict['summary'].keys()
+#activity_data_day_dict['summary']['distance']
+#activity_data_day_dict['summary']['elevation']
+#activity_data_day_dict['summary']['floors']
+#activity_data_day_dict['summary']['steps']
+#
+#
+#activity_summary_to_date_dict = {'date':[], 'distance':[], 'elevation':[], 'steps':[]}
+#
+#def get_activity_summary_for_day_dict(activity_data_day_dict, activity_summary_to_date_dict, date):
+#    activity_summary_to_date_dict['date'] = activity_summary_to_date_dict['date'] + [date]
+#    activity_summary_to_date_dict['distance'] = activity_summary_to_date_dict['distance'] + [activity_data_day_dict['summary']['distance']]
+#    activity_summary_to_date_dict['elevation'] = activity_summary_to_date_dict['elevation'] + [activity_data_day_dict['summary']['elevation']]
+#    activity_summary_to_date_dict['steps'] = activity_summary_to_date_dict['steps'] + [activity_data_day_dict['summary']['steps']]
+#    return activity_summary_to_date_dict
+#
+#activity_to_datetimes_dict = {'activity':[], 'datetime':[], 'elevation_gain':[]}
+#
+#def get_activity_info_from_one_activity_session(activity_data_day_dict, activity_to_datetimes_dict, i):
+#    # want to put the activity data into ts by minute
+#    start_time = activity_data_day_dict['activities'][i]['originalStartTime']
+#    activity_date = start_time[:10]
+#    activity_time = start_time[11:16]
+#    # need to check to make sure i'm interpreting time of day correctly
+#    start_time = pd.to_datetime(activity_date + ' ' + activity_time)
+#    duration = np.round(activity_data_day_dict['activities'][i]['originalDuration']*.001/60)
+#    times_in_activity = list(pd.date_range(start=start_time, periods=duration, freq='1min'))
+#    activity_name = activity_data_day_dict['activities'][i]['activityName']
+#    try:
+#        elevation_gain = activity_data_day_dict['activities'][i]['elevationGain']
+#        activity_to_datetimes_dict['elevation_gain'] = activity_to_datetimes_dict['elevation_gain'] + [elevation_gain]*len(times_in_actiity)
+#    except:
+#        print('no elevation gain for activity')
+#        activity_to_datetimes_dict['elevation_gain'] = activity_to_datetimes_dict['elevation_gain'] + [np.nan]*len(times_in_actiity)
+#    activity_to_datetimes_dict['activity'] = activity_to_datetimes_dict['activity'] + [activity_name]*len(times_in_actiity)
+#    activity_to_datetimes_dict['datetime'] = activity_to_datetimes_dict['datetime'] + times_in_actiity
+#    return activity_to_datetimes_dict
+#
+#i = 0
+#activity_to_datetimes_dict = get_activity_info_from_one_activity_session(activity_data_day_dict, i)
+#
+#def get_activity_info_for_date_range(dates, activity_to_datetimes_dict, activity_summary_to_date_dict):
+#    activity_to_datetimes_dict = {'activity':[], 'datetime':[], 'elevation_gain':[]}
+#    for date in dates:
+#        print(date)
+#        activity_data_day_dict = open_activity_dict(date)
+#        activity_summary_to_date_dict = get_activity_summary_for_day_dict(activity_data_day_dict, activity_summary_to_date_dict, date)
+#        if len(activity_data_day_dict['activities']) > 0:
+#            for i in range(len(activity_data_day_dict['activities'])):
+#                activity_to_datetimes_dict = get_activity_info_from_one_activity_session(activity_data_day_dict, activity_to_datetimes_dict, i)
+#        else:
+#            print('no activity timing on', date)
+#    return activity_to_datetimes_dict, activity_summary_to_date_dict
+#
+#dates = pd.date_range('2016-10-01', '2018-09-25', freq='D')
+#dates = pd.date_range('2017-10-01', '2017-11-01', freq='D')
+#activity_to_datetimes_dict = {'activity':[], 'datetime':[], 'elevation_gain':[]}
+#activity_summary_to_date_dict = {'date':[], 'distance':[], 'elevation':[], 'steps':[]}
+#
+#activity_to_datetimes_dict, activity_summary_to_date_dict = get_activity_info_for_date_range(dates, activity_to_datetimes_dict, activity_summary_to_date_dict)
+#
+#df_activity = pd.DataFrame(activity_to_datetimes_dict)
+#df_activity_summary = pd.DataFrame(activity_summary_to_date_dict)
+#
+#df_activity.columns
+#df_activity['activity'].value_counts(normalize=True)
+#
+#df_activity_summary.columns
+#df_activity_summary['steps'].hist(bins=25)
+#df_activity_summary['elevation'].hist(bins=50)
+#df_activity_summary['distance'].hist(bins=50)
+#
 
 
 
