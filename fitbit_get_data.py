@@ -9,8 +9,14 @@ Created on Sat Dec 24 16:23:34 2016
 # get sleep summary stats df
 # get hr summary stats df
 
-#only working when I use regular spyder on my mac
-#if I use anconda5, can’t access fitbit api, something goes wrong
+
+# ===============================================================
+# ***************************************************************
+# only working when I use regular spyder on my mac
+# if I use anconda5, can’t access fitbit api, something goes wrong
+# ***************************************************************
+# ===============================================================
+
 
 cd /Users/charlesmartens/Documents/projects/fitbit_data
 
@@ -42,7 +48,9 @@ consumer_secret = '90a8354c89aa8b6344eb285c87f9e052'
 #token = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0WU1WUDMiLCJhdWQiOiIyMjg2SFMiLCJpc3MiOiJGaXRiaXQiLCJ0eXAiOiJhY2Nlc3NfdG9rZW4iLCJzY29wZXMiOiJyc2V0IHJhY3QgcmxvYyByaHIgcnBybyByc2xlIiwiZXhwIjoxNTM4Nzc1NTg3LCJpYXQiOjE1MzgxNzA3ODd9.6CW8ZrF0ojxAQO-o-R3jyAnnHx0gHxEgAvr33g7RZCw'
 #token = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0WU1WUDMiLCJhdWQiOiIyMjg2SFMiLCJpc3MiOiJGaXRiaXQiLCJ0eXAiOiJhY2Nlc3NfdG9rZW4iLCJzY29wZXMiOiJyc29jIHJzZXQgcmFjdCBybG9jIHJ3ZWkgcmhyIHJudXQgcnBybyByc2xlIiwiZXhwIjoxNTM4Nzk0MDYyLCJpYXQiOjE1MzgxODkyNjJ9.If8hfgK1PRvLyN9XA75cmWcE59IjHNQ8kVeajUftetI'
 #token = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIyMjg2SFMiLCJzdWIiOiI0WU1WUDMiLCJpc3MiOiJGaXRiaXQiLCJ0eXAiOiJhY2Nlc3NfdG9rZW4iLCJzY29wZXMiOiJyc29jIHJhY3QgcnNldCBybG9jIHJ3ZWkgcmhyIHJwcm8gcm51dCByc2xlIiwiZXhwIjoxNTQzMDk5OTg1LCJpYXQiOjE1NDI0OTUxODV9.4L9BwxqWDmI6nJwioVy80NMOIDoDTGT5v2Nf_FDc8Lc'
-token = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIyMjg2SFMiLCJzdWIiOiI0WU1WUDMiLCJpc3MiOiJGaXRiaXQiLCJ0eXAiOiJhY2Nlc3NfdG9rZW4iLCJzY29wZXMiOiJyc29jIHJzZXQgcmFjdCBybG9jIHJ3ZWkgcmhyIHJudXQgcnBybyByc2xlIiwiZXhwIjoxNTQzMDk5OTg1LCJpYXQiOjE1NDI0OTU0OTV9.3tvq4UgNC6olXYerpWQ8O3ezH5ebRcU5xFwjGaq83E0'
+#token = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIyMjg2SFMiLCJzdWIiOiI0WU1WUDMiLCJpc3MiOiJGaXRiaXQiLCJ0eXAiOiJhY2Nlc3NfdG9rZW4iLCJzY29wZXMiOiJyc29jIHJzZXQgcmFjdCBybG9jIHJ3ZWkgcmhyIHJudXQgcnBybyByc2xlIiwiZXhwIjoxNTQzMDk5OTg1LCJpYXQiOjE1NDI0OTU0OTV9.3tvq4UgNC6olXYerpWQ8O3ezH5ebRcU5xFwjGaq83E0'
+#token = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIyMjg2SFMiLCJzdWIiOiI0WU1WUDMiLCJpc3MiOiJGaXRiaXQiLCJ0eXAiOiJhY2Nlc3NfdG9rZW4iLCJzY29wZXMiOiJyc29jIHJzZXQgcmFjdCBybG9jIHJ3ZWkgcmhyIHJwcm8gcm51dCByc2xlIiwiZXhwIjoxNTUyMTQ1ODQzLCJpYXQiOjE1NTE1NDEwNDN9.fli8L8INIFeUJERY65BVKAvE29xjrDaElDq7uwHpATI'
+token = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIyMjg2SFMiLCJzdWIiOiI0WU1WUDMiLCJpc3MiOiJGaXRiaXQiLCJ0eXAiOiJhY2Nlc3NfdG9rZW4iLCJzY29wZXMiOiJyc29jIHJhY3QgcnNldCBybG9jIHJ3ZWkgcmhyIHJudXQgcnBybyByc2xlIiwiZXhwIjoxNTUyMTQ1ODQzLCJpYXQiOjE1NTE1NDMzMzJ9.7G3YI4bPNCycINNm7LAZ2SgrY7d9Z8TyKkWygPa5i6M'
 
 client = fitbit.FitbitOauth2Client(consumer_key, consumer_secret)
 client.authorize_token_url(token)
@@ -64,8 +72,8 @@ stats_sleep = authd_client.sleep(date=date)
 
 dir(authd_client)
 dir(authd_client.sleep)
-
-authd_client.activity_stats
+dir(authd_client.activities)
+dir(authd_client.activity_stats)
 
 stats_hr_one_day = authd_client.intraday_time_series('activities/heart', base_date=date,
                                              detail_level='1min', start_time='00:00',
@@ -255,17 +263,37 @@ def pickle_elevation(authd_client, dates):
         except:
             'no data on ' + date
 
+def pickle_floors(authd_client, dates):
+    """ """
+    for date in dates:
+        date = str(date.year) + '-' + date.strftime('%m') + '-' + date.strftime('%d')
+        print(date)
+        try:
+            stats_activity = authd_client.intraday_time_series('activities/floors', base_date=date,
+                                                   detail_level='1min', start_time='00:00',
+                                                   end_time='23:59')
+            with open('floors'+date+'.pkl', 'wb') as picklefile:
+                pickle.dump(stats_activity, picklefile)
+        except:
+            'no data on ' + date
+
 
 #dates = pd.date_range('08/10/2017', '08/10/2018', freq='D')
 #dates = pd.date_range('01/20/2018', '08/10/2018', freq='D')
 #dates = pd.date_range('07/20/2018', '08/10/2018', freq='D')
 
 #dates = pd.date_range('10/01/2016', '01/28/2017', freq='D')
-#dates = pd.date_range('01/28/2017', '08/10/2017', freq='D')
-#dates = pd.date_range('05/31/2017', '09/25/2018', freq='D')
-dates = pd.date_range('09/15/2018', '09/25/2018', freq='D')
+#dates = pd.date_range('01/28/2017', '01/10/2018', freq='D')  
+#dates = pd.date_range('01/10/2018', '08/10/2018', freq='D')  
+#dates = pd.date_range('08/10/2018', '09/26/2018', freq='D')  # pause for a while and continue
+#dates = pd.date_range('07/24/2017', '12/31/2017', freq='D')  # pause for a while and continue
+#dates = pd.date_range('2016-12-12', '2017-05-07', freq='D')
 
-# LEFT OFF
+
+# try getting floors for this date range again. all zeros.
+dates = pd.date_range('2016-12-12', '2017-05-07', freq='D')
+# test first:
+dates = pd.date_range('2016-12-12', '2016-12-15', freq='D')
 
 
 
@@ -276,6 +304,85 @@ pickle_sedentary(authd_client, dates)
 pickle_steps(authd_client, dates)
 
 pickle_elevation(authd_client, dates)
+# elevation not correct
+
+pickle_floors(authd_client, dates)
+# finished - pickled up to 9-26
+
+
+
+
+# explore
+date_list = pd.date_range('2016-10-01', '2018-09-25', freq='D')
+date_list = date_list[100:105]
+
+date_list = pd.date_range('2019-02-25', '2019-02-27', freq='D')
+
+
+def open_metric_dict(date, metric):
+    date = str(date.year) + '-' + date.strftime('%m') + '-' + date.strftime('%d')
+    try:
+        with open(metric+date+'.pkl', 'rb') as picklefile:
+            activity_data_day_dict = pickle.load(picklefile)
+    except:
+        print(date)
+        'no dict on ' + date
+        print()
+        activity_data_day_dict = None
+    return activity_data_day_dict
+
+date = date_list[1]
+elevation_data_day_dict = open_metric_dict(date, 'elevation')
+elevation_data_day_dict.keys()
+elevation_data_day_dict['activities-elevation']
+elevation_data_day_dict['activities-elevation-intraday'].keys()
+elevation_data_day_dict['activities-elevation-intraday']['dataset']
+
+metric='elevation'
+
+def create_df_for_metric_each_minute(date_list, metric):
+    time_and_steps_dict = {'date':[], 'time':[], metric:[]}
+    for date in date_list:
+        steps_data_day_dict = open_metric_dict(date, metric)
+        if steps_data_day_dict == None:
+            None
+        else:
+            dataset_day = steps_data_day_dict['activities-'+metric+'-intraday']['dataset']
+            for data_dict in dataset_day:
+                time_and_steps_dict['date'].append(date)
+                time_and_steps_dict['time'].append(data_dict['time'])
+                time_and_steps_dict[metric].append(data_dict['value'])
+    df_time_steps = pd.DataFrame(time_and_steps_dict)
+    return df_time_steps  
+
+
+dates = pd.date_range('01/01/2018', '09/01/2018', freq='D')
+
+df_time_floors = create_df_for_metric_each_minute(dates, 'floors')
+df_time_floors.groupby('date')['floors'].sum().hist(bins=15, alpha=.6)
+plt.grid(False)
+
+df_time_elevation = create_df_for_metric_each_minute(dates, 'elevation')
+df_time_elevation.groupby('date')['elevation'].sum().hist(bins=15, alpha=.6)
+plt.grid(False)
+
+# returning zeros
+
+df_time_elevation = create_df_for_metric_each_minute(dates, 'elevation')
+df_time_elevation.groupby('date')['elevation'].sum().hist(bins=15, alpha=.6)
+plt.grid(False)
+
+
+pickle_elevation(authd_client, date_list)
+df_time_elevation = create_df_for_metric_each_minute(date_list, 'elevation')
+
+
+
+
+
+
+
+
 
 
 

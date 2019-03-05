@@ -9,17 +9,18 @@ Alcohol on HR while asleep (presented at Google).
 
 """
 
+# get new sleep quality metrics
+# start on L 2210
+
 ## ===============================================================
 ## save df with sedentary hr mean ea day as measure of resting hr
 ## computed by getting the mean sedentary hr each hour and then taking
 ## the average of these hourly measurements
-#df_sedentary_hr_mean_day.to_pickle('df_sedentary_hr_mean_day.pkl')
+# df_sedentary_hr_mean_day.to_pickle('df_sedentary_hr_mean_day.pkl')
 ## save df with minimum sedentary hr mean ea day as measure of resting hr
 ## computed by getting the minium sedentary hr each hour and then taking
 ## the average of these hourly measurements
-#df_minimum_hr_mean_day.to_pickle('df_minimum_hr_mean_day.pkl')
-
-# explore that lip just before waking. is there a lot of variability in that?
+# df_minimum_hr_mean_day.to_pickle('df_minimum_hr_mean_day.pkl')
 ## ===============================================================
 
 
@@ -375,7 +376,6 @@ sns.despine()
 df_hr_sleep.head()
 date_time_to_hr_dict = dict(zip(df_hr_sleep['date_time'], df_hr_sleep['hr']))
 
-
 df_sleep = pd.read_pickle('df_sleep.pkl')
 df_sleep.head()
 df_sleep.tail()
@@ -467,21 +467,28 @@ df_daily_qs['date_prior'] = df_daily_qs['date'] - timedelta(days=1)
 df_daily_qs['date_two_prior'] = df_daily_qs['date'] - timedelta(days=2)
 df_daily_qs[['date_prior', 'date_two_prior', 'date']]
 
+def create_lagged_date_variables(number_of_lags, date_variable, df):
+    for lag in list(range(1,number_of_lags+1)):
+        df['date_lag_'+str(lag)] = df[date_variable] - timedelta(days=lag)
+    return df
 
-df_daily_qs[['date_prior', 'alcohol']]
+df_daily_qs = create_lagged_date_variables(2, 'date', df_daily_qs)
+df_daily_qs.head()
+
+df_daily_qs[['date_lag_1', 'alcohol']]
 df_daily_qs_w_alcohol = df_daily_qs[df_daily_qs['alcohol'].notnull()]
 df_daily_qs_w_alcohol = df_daily_qs_w_alcohol.reset_index(drop=True)
-df_daily_qs_w_alcohol[['date_prior', 'alcohol']]
-df_daily_qs_w_alcohol[['date_prior', 'alcohol']][:50]
+df_daily_qs_w_alcohol[['date_lag_1', 'alcohol']]
+df_daily_qs_w_alcohol[['date_lag_1', 'alcohol']][:50]
 
-sns.relplot(x='date_prior', y='alcohol', data=df_daily_qs_w_alcohol, kind='line')
+sns.relplot(x='date_lag_1', y='alcohol', data=df_daily_qs_w_alcohol, kind='line')
 
-df_daily_qs_w_alcohol_from_6_1_17 = df_daily_qs_w_alcohol[df_daily_qs_w_alcohol['date_prior']>='2017-09-01']
-df_daily_qs_w_alcohol_from_6_1_17[['date_prior', 'alcohol']]
+df_daily_qs_w_alcohol_from_6_1_17 = df_daily_qs_w_alcohol[df_daily_qs_w_alcohol['date_lag_1']>='2017-09-01']
+df_daily_qs_w_alcohol_from_6_1_17[['date_lag_1', 'alcohol']]
 
 # alt date to alcohol dict starting a bit later
 #date_to_alcohol_dict = dict(zip(df_daily_qs_w_alcohol_from_6_1_17['date_prior'], df_daily_qs_w_alcohol_from_6_1_17['alcohol']))
-date_to_alcohol_dict = dict(zip(df_daily_qs['date_prior'], df_daily_qs['alcohol']))
+date_to_alcohol_dict = dict(zip(df_daily_qs['date_lag_1'], df_daily_qs['alcohol']))
 df_sleep['alcohol'] = df_sleep['date_sleep'].map(date_to_alcohol_dict)
 len(df_sleep)  # 725079
 len(df_sleep['date_sleep'].unique())  # 708
@@ -490,7 +497,7 @@ df_test = df_sleep.groupby('date_sleep')['alcohol'].mean()
 len(df_test[df_test.notnull()])  # 480 days w alcohol ratings
 
 df_daily_qs['alcohol_type'].unique()
-date_to_alcohol_type_dict = dict(zip(df_daily_qs['date_prior'], df_daily_qs['alcohol_type']))
+date_to_alcohol_type_dict = dict(zip(df_daily_qs['date_lag_1'], df_daily_qs['alcohol_type']))
 
 # truncate so only alcohol days
 df_sleep = df_sleep[df_sleep['alcohol'].notnull()]
@@ -509,7 +516,6 @@ len(df_sleep['date_sleep'].unique())  # 480
 #df_sleep_8_to_11_resampled = df_sleep_8_to_11_resampled[-df_sleep_8_to_11_resampled['date_sleep'].isin(dates_vietnam_list)]
 #len(df_sleep_8_to_11_resampled['date_sleep'].unique())  # 697
 
-
 # plot again but plot the data from the sleep api
 plt.figure(figsize=(14, 6), dpi=80)
 sns.countplot(df_sleep['date_time'].dt.hour, color='dodgerblue', alpha=.5)
@@ -518,6 +524,8 @@ plt.ylabel('Sleep Measurements', fontsize=26)
 plt.xticks(fontsize=22)
 plt.yticks([],[], fontsize=22)
 sns.despine()
+
+df_sleep['hr'] = df_sleep['date_time'].map(date_time_to_hr_dict)
 
 df_sleep.head()
 df_sleep_min = df_sleep[df_sleep['date_time'].astype(str).str[-2:-1]=='0']
@@ -528,7 +536,6 @@ df_sleep_by_day.mean()  # 8.439036 -- can't be???
 df_sleep_min.head()
 1 - len(df_sleep_min[df_sleep_min['hr'].isnull()]) / len(df_sleep_min)
 
-df_sleep['hr'] = df_sleep['date_time'].map(date_time_to_hr_dict)
 len(df_sleep[df_sleep['hr'].isnull()]) / len(df_sleep)
 # should be .50. so a few are missing and not sure why
 # try a ffill and see what's still null
@@ -593,10 +600,8 @@ df_sleep_8_to_11[df_sleep_8_to_11['date_sleep']=='2018-09-23'].tail(50)
 df_hr[(df_hr['date_time']>'2018-09-24 07:01:30') & (df_hr['date_time']<'2018-09-24 07:20:30')]
 # there's just nothing in the hr files for these times. just missing. ok.
 
-
 # PLOT RELATIONSHIP BETWEEN NUMBER OF DATAPOINTS ASLEEP IN A NIGHT AND THE MEAN HR
 # TO SEE THE RANGE INCREASE AS FEWER DATA POINTS. FUNNEL PLOT
-
 
 # next steps - look at notes on github jupyter nb
 # clean data - remove outliers and implausible values
@@ -624,7 +629,6 @@ df_sleep_8_to_11[df_sleep_8_to_11['awake']==1]['hr'].mean()
 df_sleep_8_to_11.loc[df_sleep_8_to_11['awake']==1, 'hr'] = np.nan
 
 len(df_sleep_8_to_11['date_sleep'].unique())  # 699
-
 
 # how to reample w 30 sec. do i have to do this? this might be unnecessary
 # check to see if anything is different when resample within date
@@ -729,6 +733,7 @@ df_sleep_8_to_11[df_sleep_8_to_11['date_sleep']=='2017-09-01']
 df_hr_missing_by_day = df_hr_missing_by_day[df_hr_missing_by_day<70]
 
 df_hr_missing_by_day = df_hr_missing_by_day.round(1)
+
 df_hr_missing_by_day.hist(bins=12, color='dodgerblue', alpha=.5)
 plt.xlabel('Percent of Sleep Minutes With Missing HR', fontsize=20)
 plt.ylabel('Number of Nights', fontsize=20)
@@ -902,7 +907,6 @@ df_sleep_8_to_11['hr_interpolate_clean'] = df_sleep_8_to_11.groupby(['date_sleep
 df_sleep_8_to_11[['date_sleep', 'date_time', 'hr', 'hr_interpolate_clean']]
 df_sleep_8_to_11.loc[df_sleep_8_to_11['hr_interpolate'].isnull(), 'hr_rolling_30_min'] = np.nan
 
-
 # resample here?
 df_sleep_8_to_11_resampled = df_sleep_8_to_11.groupby('date_sleep').resample('30S', on='date_time').mean().reset_index()
 # this resampled within date_sleep
@@ -1028,7 +1032,6 @@ ax.set_ylim(46,69)
 ax.grid(axis='y', alpha=.5)
 fig.autofmt_xdate()
 sns.despine()
-
 
 
 # for present
@@ -1227,8 +1230,7 @@ sns.despine()
 
 df_hr_mean['alcohol_tertile'].value_counts()
 sns.barplot(x='alcohol_tertile', y='hr_mean', data=df_hr_mean, alpha=.6, 
-            color='dodgerblue', errcolor='grey', 
-            order=['no_drinks', 'one_drink', 'two_plus_drinks'])
+            color='dodgerblue', errcolor='grey')  # order=['no_drinks', 'one_drink', 'two_plus_drinks']
 plt.ylim(40,65)
 plt.ylabel('Mean Heart Rate', fontsize=15)
 plt.xlabel('Number of Drinks', fontsize=15)
@@ -1319,14 +1321,12 @@ sns.barplot(x='month', y='hr_mean', data=df_hr_mean,
             color='dodgerblue', alpha=.6, errcolor='grey')
 plt.ylim(40,60)
 
-sns.lmplot(x='temp', y='hr_mean', data=df_hr_mean, order=3, scatter_kws={'alpha':.1})
-plt.ylim(50,55)
-
 sns.relplot(x='temp', y='hr_mean', data=df_hr_mean, kind='line')
 
 results = smf.ols(formula = """hr_mean ~ alcohol + tue + wed + thu + fri + 
                   sat + sun + temp""", data=df_hr_mean).fit()
 print(results.summary())
+
 
 # what about just a general trend and also lagged variables?
 # looks like maybe just a general downward trend. how to model that?
@@ -1416,17 +1416,51 @@ results = smf.ols(formula = """hr_mean ~ alcohol + tue + wed + thu + fri +
 print(results.summary())
 
 
+df_sleep_8_to_11.columns
+df_sleep_8_to_11['date_time']
+df_sleep_8_to_11['awake'].value_counts()
+df_sleep_8_to_11['start_sleep']
+
+
+df_rows_within_sleep = df_sleep_8_to_11.groupby('date_sleep').size().reset_index().rename(columns={0:'within_sleep_30sec'})
+df_rows_within_sleep['within_sleep_30sec'].hist(bins=20)
+df_rows_within_sleep['within_sleep_30sec'].mean() / 120
+df_rows_within_sleep['within_sleep_30sec'].median() / 120
+df_rows_within_sleep['min_within_sleep'] = df_rows_within_sleep['within_sleep_30sec']/2
+date_to_min_within_sleep_dict = dict(zip(df_rows_within_sleep['date_sleep'], df_rows_within_sleep['min_within_sleep']))
+df_hr_mean['min_within_sleep'] = df_hr_mean['date_sleep'].map(date_to_min_within_sleep_dict)
+df_hr_mean['min_within_sleep'].hist()
+df_hr_mean['min_within_sleep'].mean()/60
+
+# pickle time within sleep -- from start to end of sleep including times awake in between
+with open('date_to_min_within_sleep_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_to_min_within_sleep_dict, picklefile)
+
+
 # what about including lagged hr-sleep? look up ts. is that all they'd do?
 # include lagged
 df_hr_mean.head()
+df_hr_mean.columns
 # do again so if missing days, the lag is nan
-df_hr_mean['hr_mean_lag1'] = df_hr_mean['hr_mean'].shift(1)
-df_hr_mean['hr_mean_lag2'] = df_hr_mean['hr_mean'].shift(2)
-df_hr_mean['hr_mean_lag3'] = df_hr_mean['hr_mean'].shift(3)
-df_hr_mean['alcohol_lag1'] = df_hr_mean['alcohol'].shift(1)
-df_hr_mean['alcohol_lag2'] = df_hr_mean['alcohol'].shift(2)
-df_hr_mean['alcohol_lag3'] = df_hr_mean['alcohol'].shift(3)
-df_hr_mean[['hr_mean', 'hr_mean_lag1', 'hr_mean_lag2', 'alcohol', 
+
+df_hr_mean = create_lagged_date_variables(3, 'date_sleep', df_hr_mean)
+date_sleep_to_hr_sleep_dict = dict(zip(df_hr_mean['date_sleep'], df_hr_mean['hr_mean']))
+date_sleep_to_alcohol_dict = dict(zip(df_hr_mean['date_sleep'], df_hr_mean['alcohol']))
+
+df_hr_mean['hr_mean_lag1'] = df_hr_mean['date_lag_1'].map(date_sleep_to_hr_sleep_dict)
+df_hr_mean['hr_mean_lag2'] = df_hr_mean['date_lag_2'].map(date_sleep_to_hr_sleep_dict)
+df_hr_mean['hr_mean_lag3'] = df_hr_mean['date_lag_3'].map(date_sleep_to_hr_sleep_dict)
+df_hr_mean['alcohol_lag1'] = df_hr_mean['date_lag_1'].map(date_sleep_to_alcohol_dict)
+df_hr_mean['alcohol_lag2'] = df_hr_mean['date_lag_2'].map(date_sleep_to_alcohol_dict)
+df_hr_mean['alcohol_lag3'] = df_hr_mean['date_lag_3'].map(date_sleep_to_alcohol_dict)
+# below is bad way to create lagged variables because of gaps in the timeseries:
+#df_hr_mean['hr_mean_lag1'] = df_hr_mean['hr_mean'].shift(1)
+#df_hr_mean['hr_mean_lag2'] = df_hr_mean['hr_mean'].shift(2)
+#df_hr_mean['hr_mean_lag3'] = df_hr_mean['hr_mean'].shift(3)
+#df_hr_mean['alcohol_lag1'] = df_hr_mean['alcohol'].shift(1)
+#df_hr_mean['alcohol_lag2'] = df_hr_mean['alcohol'].shift(2)
+#df_hr_mean['alcohol_lag3'] = df_hr_mean['alcohol'].shift(3)
+df_hr_mean[['hr_mean', 'hr_mean_lag1', 'hr_mean_lag2', 'hr_mean_lag3', 'alcohol', 
             'alcohol_lag1', 'alcohol_lag2']][300:310]
 df_hr_mean[['hr_mean', 'hr_mean_lag1', 'hr_mean_lag2', 'hr_mean_lag3',
             'alcohol', 'alcohol_lag1', 'alcohol_lag2', 'alcohol_lag3']].corr()
@@ -1446,21 +1480,26 @@ autocorrelation_plot(hr_series)
 autocorrelation_plot(alcohol_series)
 
 autocorrelation_plot(hr_series)
-plt.xlim(1,100)
+plt.xlim(1,25)
 plt.ylim(-.5,.5)
 autocorrelation_plot(alcohol_series)
-plt.xlim(1,100)
+plt.xlim(1,25)
 plt.ylim(-.5,.5)
+plt.grid(False)
 
 # but really i want the partial autocorrelation: The partial 
 # autocorrelation at lag k is the correlation that results 
 # after removing the effect of any correlations due to the 
 # terms at shorter lags. 
+from statsmodels.graphics.tsaplots import plot_pacf
+plot_pacf(hr_series, lags=20)  # 1-2 days back seem correlated.
+plot_pacf(alcohol_series, lags=20)  # no days back seem relevant. use 1 lag still.
+
 
 results = smf.ols(formula = """hr_mean ~ alcohol + tue + wed + thu + fri + 
                   sat + sun + temp + I(temp**2) + month_ts + start_sleep_time + 
                   I(start_sleep_time**2) + min_asleep + I(min_asleep**2) + 
-                  hr_mean_lag1 + hr_mean_lag2 + hr_mean_lag3 + alcohol_lag1
+                  hr_mean_lag1 + hr_mean_lag2 + alcohol_lag1
                   """, data=df_hr_mean).fit()
 print(results.summary())
 
@@ -1476,9 +1515,9 @@ df_hr_mean.columns
 #df_daily_qs[['date_next', 'date']]
 #df_daily_qs.columns
 
-date_to_subjective_sleep_dict = dict(zip(df_daily_qs['date_prior'], df_daily_qs['sleep']))
-date_to_fun_dict = dict(zip(df_daily_qs['date_prior'], df_daily_qs['fun']))
-date_to_energy_dict = dict(zip(df_daily_qs['date_prior'], df_daily_qs['energy']))
+date_to_subjective_sleep_dict = dict(zip(df_daily_qs['date_lag_1'], df_daily_qs['sleep']))
+date_to_fun_dict = dict(zip(df_daily_qs['date_lag_1'], df_daily_qs['fun']))
+date_to_energy_dict = dict(zip(df_daily_qs['date_lag_1'], df_daily_qs['energy']))
 
 df_hr_mean['subj_sleep'] = df_hr_mean['date_sleep'].map(date_to_subjective_sleep_dict)
 len(df_hr_mean[df_hr_mean['subj_sleep'].notnull()])
@@ -1528,9 +1567,14 @@ plt.yticks(fontsize=14)
 sns.despine()
 
 df_hr_mean[['energy', 'subj_sleep', 'fun', 'hr_mean', 'index']].corr()
-df_hr_mean['energy_lag1'] = df_hr_mean['energy'].shift(1)
-df_hr_mean['fun_lag1'] = df_hr_mean['fun'].shift(1)
-df_hr_mean['subj_sleep_lag1'] = df_hr_mean['subj_sleep'].shift(1)
+
+# lag ratings 
+df_hr_mean['energy_lag1'] = df_hr_mean['date_lag_1'].map(date_to_energy_dict)
+df_hr_mean['energy_lag2'] = df_hr_mean['date_lag_2'].map(date_to_energy_dict)
+df_hr_mean['fun_lag1'] = df_hr_mean['date_lag_1'].map(date_to_fun_dict)
+df_hr_mean['fun_lag2'] = df_hr_mean['date_lag_2'].map(date_to_fun_dict)
+df_hr_mean['subj_sleep_lag1'] = df_hr_mean['date_lag_1'].map(date_to_subjective_sleep_dict)
+df_hr_mean['subj_sleep_lag2'] = df_hr_mean['date_lag_2'].map(date_to_subjective_sleep_dict)
 # subj sleep lag1 refers to how think slept the night before the night of the dv
 # so that's what i'd want to include. and perhaps a lag2 also
 
@@ -1540,7 +1584,6 @@ results = smf.ols(formula = """hr_mean ~ alcohol + tue + wed + thu + fri +
                   hr_mean_lag1 + hr_mean_lag2 + hr_mean_lag3 + alcohol_lag1 + 
                   subj_sleep_lag1 + fun_lag1""", data=df_hr_mean).fit()
 print(results.summary())
-
 # left out min_asleep + I(min_asleep**2) + 
 # doesn't change things and not sure i should control for this since
 # it's at the same time as the hr mean is calculated, right?
@@ -1569,12 +1612,11 @@ results = smf.ols(formula = """hr_mean ~ one_drink + two_plus_drinks""", data=df
 print(results.summary())
 
 
-
 # get all vars set to answer any qs
-
 # does hr from prior night affect alc next night?
 
-df_hr_mean['start_sleep_time_lag'] = df_hr_mean['start_sleep_time'].shift(1)
+date_sleep_to_start_sleep_time_dict = dict(zip(df_hr_mean['date_sleep'], df_hr_mean['start_sleep_time']))
+df_hr_mean['start_sleep_time_lag'] = df_hr_mean['date_lag_1'].map(date_sleep_to_start_sleep_time_dict)
 
 results = smf.ols(formula = """alcohol ~ hr_mean_lag1""", data=df_hr_mean).fit()
 print(results.summary())
@@ -1601,9 +1643,6 @@ results = smf.ols(formula = """alcohol ~ hr_mean_lag1 + tue + wed + thu + fri +
 print(results.summary())
 # could plot this
 
-
-df_hr_mean
-
 # get corr matrix. what's the multicolinearity? doesn't matter for the 
 # covariates? 
 def plot_corr_matrix_heatmap(df, var_list, var_list_labels):
@@ -1621,10 +1660,6 @@ var_list = ['hr_mean', 'alcohol', 'temp', 'month_ts', 'start_sleep_time',
             'min_asleep', 'subj_sleep', 'energy', 'fun', 'fun_lag1', 
             'subj_sleep_lag1', 'energy_lag1']
 plot_corr_matrix_heatmap(df_hr_mean, var_list, var_list)
-
-
-
-
 
 # plot this relationship between drinks and hr controlling for all vars
 # like i did for the industry and wages project. can show ci bars for 
@@ -1797,8 +1832,6 @@ se_drinks_4 = results.bse[4]
 #se = df_hr_mean[df_hr_mean['alcohol']==4]['hr_mean'].std() / np.sqrt(len(df_hr_mean[df_hr_mean['alcohol']==4]))
 
 
-
-
 # time series by drinks
 df_sleep_8_to_11_resampled['alcohol'] = np.nan
 df_sleep_8_to_11_resampled['alcohol'] = df_sleep_8_to_11_resampled['date_sleep'].map(date_to_alcohol_dict)
@@ -1846,6 +1879,13 @@ ax.set_ylim(48,75)
 ax.legend(['No drinks', '1 drink', '2+ drinks'], fontsize=22)
 fig.autofmt_xdate()
 #sns.despine()
+
+
+# =====================================
+# save for creating new variables later
+df_sleep_8_to_11_resampled.to_pickle('df_sleep_8_to_11_resampled.pkl')
+# =====================================
+df_sleep_8_to_11_resampled = pd.read_pickle('df_sleep_8_to_11_resampled.pkl')
 
 
 df_asleep = df_sleep_8_to_11_resampled[df_sleep_8_to_11_resampled['awake']!=1]
@@ -1935,6 +1975,13 @@ ax.invert_xaxis()
 #sns.despine()
 
 
+# ==================================
+# save for future computing of hr 
+# from sleep onset and from waking
+df_asleep.to_pickle('df_asleep.pkl')
+# ==================================
+
+
 # explore that lip just before waking. is there a lot of variability in that?
 # does that lip appear every time i wake up during the night?
 # is it possibe that this is awake time that the fitbit mis-labelled as asleep?
@@ -1946,6 +1993,7 @@ df_asleep['minutes_from_waking'].hist(alpha=.75)
 plt.grid(False)
 
 df_asleep_final_hour = df_asleep[df_asleep['minutes_from_waking']<.5]
+#df_asleep_final_hour = df_asleep[df_asleep['minutes_from_waking']<60]
 df_asleep_final_hour.columns
 
 # overlay many nights
@@ -1980,11 +2028,11 @@ ax.xaxis.set_tick_params(labelsize=22)
 ax.yaxis.set_tick_params(labelsize=22)
 ax.set_xlabel('Number of Hours From Waking', fontsize=26)
 ax.set_ylabel('Heart Rate', fontsize=26)
-ax.set_xlim(0,.05)
+ax.set_xlim(0,.1)
 ax.set_ylim(49,61)  
 ax.invert_xaxis()
 
-# i guess this plot above suggests that there reall is a lip starting 
+# i guess this plot above suggests that there really is a lip starting 
 # at about .015. that's a little under 1 minute. So could take the final
 # minute as "the lip" and could cut it off and/or use it as a variable.
 
@@ -2020,102 +2068,102 @@ ax.invert_xaxis()
 
 
 # does type of alcohol matter?
-df_asleep['alcohol_type'] = df_asleep['date_sleep'].map(date_to_alcohol_type_dict)
-df_asleep_alcohol = df_asleep[df_asleep['alcohol']==1]
-df_asleep_alcohol['alcohol_type'].value_counts()
-df_asleep_alcohol = df_asleep_alcohol[df_asleep_alcohol['alcohol_type'].isin(['Beer', 'Red wine', 'Hard alcohol'])]
-
-fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10,6), dpi=80)
-sns.relplot(x='minutes_asleep', y='hr_interpolate_clean', 
-            data=df_asleep_alcohol,  # .sample(n=1000), 
-            kind='line', ci=90, hue='alcohol_type', alpha=.5,
-            #palette=['orange', 'red'], 
-            #hue_order=['1','2'], 
-            ax=ax)
-yticks = list(range(50,75,5))
-yticklabels = [str(tick) for tick in yticks]
-ax.set_yticks(yticks)
-ax.set_yticklabels(yticklabels)
-ax.xaxis.set_tick_params(labelsize=22)
-ax.yaxis.set_tick_params(labelsize=22)
-ax.set_xlabel('Number of Hours From Sleep Onset', fontsize=26)
-ax.set_ylabel('Heart Rate', fontsize=26)
-ax.set_xlim(0,8)
-ax.set_ylim(49,71) 
-ax.legend(fontsize=22) 
-#ax.legend(['1 drink', '2+ drinks'], fontsize=22)
-
-# do in regression
-df_asleep['alcohol_type'].unique()
-
-results = smf.ols(formula = """hr_mean ~ alcohol +
-                  tue + wed + thu + fri + sat + sun + temp + month_ts + 
-                  start_sleep_time + hr_mean_lag1 + hr_mean_lag2 + 
-                  alcohol_lag1 + fun_lag1""", data=df_hr_mean).fit()
-print(results.summary())
-
-df_asleep['alcohol_type'].replace(np.nan, 'none', inplace=True)
-df_asleep['alcohol_type'].unique()
-df_asleep['beer'] = 0
-df_asleep.loc[df_asleep['alcohol_type'].str.contains('Beer'), 'beer'] = 1
-df_asleep['red_wine'] = 0
-df_asleep.loc[df_asleep['alcohol_type'].str.contains('Red wine'), 'red_wine'] = 1
-df_asleep['white_wine'] = 0
-df_asleep.loc[df_asleep['alcohol_type'].str.contains('White wine'), 'white_wine'] = 1
-df_asleep['mixed_drink'] = 0
-df_asleep.loc[df_asleep['alcohol_type'].str.contains('Mixed drink'), 'mixed_drink'] = 1
-df_asleep['hard_alcohol'] = 0
-df_asleep.loc[df_asleep['alcohol_type'].str.contains('Hard alcohol'), 'hard_alcohol'] = 1
-df_asleep['champaigne'] = 0
-df_asleep.loc[df_asleep['alcohol_type'].str.contains('Champaigne'), 'champaigne'] = 1
-
-for alcohol in ['beer', 'red_wine', 'white_wine', 'mixed_drink', 'hard_alcohol', 'champaigne']:
-    print(df_asleep[alcohol].value_counts(normalize=True))
-    print()
-
-df_hr_mean['alcohol_type'] = df_hr_mean['date_sleep'].map(date_to_alcohol_type_dict)
-df_hr_mean['alcohol_type'].replace(np.nan, 'none', inplace=True)
-df_hr_mean['beer'] = 0
-df_hr_mean.loc[df_hr_mean['alcohol_type'].str.contains('Beer'), 'beer'] = 1
-df_hr_mean['red_wine'] = 0
-df_hr_mean.loc[df_hr_mean['alcohol_type'].str.contains('Red wine'), 'red_wine'] = 1
-df_hr_mean['white_wine'] = 0
-df_hr_mean.loc[df_hr_mean['alcohol_type'].str.contains('White wine'), 'white_wine'] = 1
-df_hr_mean['mixed_drink'] = 0
-df_hr_mean.loc[df_hr_mean['alcohol_type'].str.contains('Mixed drink'), 'mixed_drink'] = 1
-df_hr_mean['hard_alcohol'] = 0
-df_hr_mean.loc[df_hr_mean['alcohol_type'].str.contains('Hard alcohol'), 'hard_alcohol'] = 1
-df_hr_mean['champaigne'] = 0
-df_hr_mean.loc[df_hr_mean['alcohol_type'].str.contains('Champaigne'), 'champaigne'] = 1
-
-for alcohol in ['beer', 'red_wine', 'white_wine', 'mixed_drink', 'hard_alcohol', 'champaigne']:
-    print(df_hr_mean[alcohol].value_counts(normalize=True))
-    print()
-
-results = smf.ols(formula = """hr_mean ~ alcohol +
-                  tue + wed + thu + fri + sat + sun + temp + month_ts + 
-                  start_sleep_time + hr_mean_lag1 + hr_mean_lag2 + 
-                  alcohol_lag1 + fun_lag1 + beer + red_wine + 
-                  white_wine + mixed_drink + hard_alcohol""", data=df_hr_mean[df_hr_mean['alcohol']>0]).fit()
-print(results.summary())
-
-df_hr_mean_alcohol_1 = df_hr_mean[df_hr_mean['alcohol']==1]
-
-results = smf.ols(formula = """hr_mean ~
-                  tue + wed + thu + fri + sat + sun + temp + month_ts + 
-                  start_sleep_time + hr_mean_lag1 + hr_mean_lag2 + 
-                  alcohol_lag1 + fun_lag1 + beer + red_wine + 
-                  hard_alcohol""", data=df_hr_mean_alcohol_1).fit()
-print(results.summary())
-
-df_hr_mean_alcohol_1['alcohol_type_1_drink'] = 'other'
-df_hr_mean_alcohol_1.loc[df_hr_mean_alcohol_1['red_wine']==1, 'alcohol_type_1_drink'] = 'red_wine'
-df_hr_mean_alcohol_1.loc[df_hr_mean_alcohol_1['hard_alcohol']==1, 'alcohol_type_1_drink'] = 'hard_alcohol'
-df_hr_mean_alcohol_1.loc[df_hr_mean_alcohol_1['beer']==1, 'alcohol_type_1_drink'] = 'beer'
-
-sns.barplot(x='alcohol_type_1_drink', y='hr_mean', data=df_hr_mean_alcohol_1, 
-            color='dodgerblue', alpha=.7)
-plt.ylim(40,57)
+#df_asleep['alcohol_type'] = df_asleep['date_sleep'].map(date_to_alcohol_type_dict)
+#df_asleep_alcohol = df_asleep[df_asleep['alcohol']==1]
+#df_asleep_alcohol['alcohol_type'].value_counts()
+#df_asleep_alcohol = df_asleep_alcohol[df_asleep_alcohol['alcohol_type'].isin(['Beer', 'Red wine', 'Hard alcohol'])]
+#
+#fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10,6), dpi=80)
+#sns.relplot(x='minutes_asleep', y='hr_interpolate_clean', 
+#            data=df_asleep_alcohol,  # .sample(n=1000), 
+#            kind='line', ci=90, hue='alcohol_type', alpha=.5,
+#            #palette=['orange', 'red'], 
+#            #hue_order=['1','2'], 
+#            ax=ax)
+#yticks = list(range(50,75,5))
+#yticklabels = [str(tick) for tick in yticks]
+#ax.set_yticks(yticks)
+#ax.set_yticklabels(yticklabels)
+#ax.xaxis.set_tick_params(labelsize=22)
+#ax.yaxis.set_tick_params(labelsize=22)
+#ax.set_xlabel('Number of Hours From Sleep Onset', fontsize=26)
+#ax.set_ylabel('Heart Rate', fontsize=26)
+#ax.set_xlim(0,8)
+#ax.set_ylim(49,71) 
+#ax.legend(fontsize=22) 
+##ax.legend(['1 drink', '2+ drinks'], fontsize=22)
+#
+## do in regression
+#df_asleep['alcohol_type'].unique()
+#
+#results = smf.ols(formula = """hr_mean ~ alcohol +
+#                  tue + wed + thu + fri + sat + sun + temp + month_ts + 
+#                  start_sleep_time + hr_mean_lag1 + hr_mean_lag2 + 
+#                  alcohol_lag1 + fun_lag1""", data=df_hr_mean).fit()
+#print(results.summary())
+#
+#df_asleep['alcohol_type'].replace(np.nan, 'none', inplace=True)
+#df_asleep['alcohol_type'].unique()
+#df_asleep['beer'] = 0
+#df_asleep.loc[df_asleep['alcohol_type'].str.contains('Beer'), 'beer'] = 1
+#df_asleep['red_wine'] = 0
+#df_asleep.loc[df_asleep['alcohol_type'].str.contains('Red wine'), 'red_wine'] = 1
+#df_asleep['white_wine'] = 0
+#df_asleep.loc[df_asleep['alcohol_type'].str.contains('White wine'), 'white_wine'] = 1
+#df_asleep['mixed_drink'] = 0
+#df_asleep.loc[df_asleep['alcohol_type'].str.contains('Mixed drink'), 'mixed_drink'] = 1
+#df_asleep['hard_alcohol'] = 0
+#df_asleep.loc[df_asleep['alcohol_type'].str.contains('Hard alcohol'), 'hard_alcohol'] = 1
+#df_asleep['champaigne'] = 0
+#df_asleep.loc[df_asleep['alcohol_type'].str.contains('Champaigne'), 'champaigne'] = 1
+#
+#for alcohol in ['beer', 'red_wine', 'white_wine', 'mixed_drink', 'hard_alcohol', 'champaigne']:
+#    print(df_asleep[alcohol].value_counts(normalize=True))
+#    print()
+#
+#df_hr_mean['alcohol_type'] = df_hr_mean['date_sleep'].map(date_to_alcohol_type_dict)
+#df_hr_mean['alcohol_type'].replace(np.nan, 'none', inplace=True)
+#df_hr_mean['beer'] = 0
+#df_hr_mean.loc[df_hr_mean['alcohol_type'].str.contains('Beer'), 'beer'] = 1
+#df_hr_mean['red_wine'] = 0
+#df_hr_mean.loc[df_hr_mean['alcohol_type'].str.contains('Red wine'), 'red_wine'] = 1
+#df_hr_mean['white_wine'] = 0
+#df_hr_mean.loc[df_hr_mean['alcohol_type'].str.contains('White wine'), 'white_wine'] = 1
+#df_hr_mean['mixed_drink'] = 0
+#df_hr_mean.loc[df_hr_mean['alcohol_type'].str.contains('Mixed drink'), 'mixed_drink'] = 1
+#df_hr_mean['hard_alcohol'] = 0
+#df_hr_mean.loc[df_hr_mean['alcohol_type'].str.contains('Hard alcohol'), 'hard_alcohol'] = 1
+#df_hr_mean['champaigne'] = 0
+#df_hr_mean.loc[df_hr_mean['alcohol_type'].str.contains('Champaigne'), 'champaigne'] = 1
+#
+#for alcohol in ['beer', 'red_wine', 'white_wine', 'mixed_drink', 'hard_alcohol', 'champaigne']:
+#    print(df_hr_mean[alcohol].value_counts(normalize=True))
+#    print()
+#
+#results = smf.ols(formula = """hr_mean ~ alcohol +
+#                  tue + wed + thu + fri + sat + sun + temp + month_ts + 
+#                  start_sleep_time + hr_mean_lag1 + hr_mean_lag2 + 
+#                  alcohol_lag1 + fun_lag1 + beer + red_wine + 
+#                  white_wine + mixed_drink + hard_alcohol""", data=df_hr_mean[df_hr_mean['alcohol']>0]).fit()
+#print(results.summary())
+#
+#df_hr_mean_alcohol_1 = df_hr_mean[df_hr_mean['alcohol']==1]
+#
+#results = smf.ols(formula = """hr_mean ~
+#                  tue + wed + thu + fri + sat + sun + temp + month_ts + 
+#                  start_sleep_time + hr_mean_lag1 + hr_mean_lag2 + 
+#                  alcohol_lag1 + fun_lag1 + beer + red_wine + 
+#                  hard_alcohol""", data=df_hr_mean_alcohol_1).fit()
+#print(results.summary())
+#
+#df_hr_mean_alcohol_1['alcohol_type_1_drink'] = 'other'
+#df_hr_mean_alcohol_1.loc[df_hr_mean_alcohol_1['red_wine']==1, 'alcohol_type_1_drink'] = 'red_wine'
+#df_hr_mean_alcohol_1.loc[df_hr_mean_alcohol_1['hard_alcohol']==1, 'alcohol_type_1_drink'] = 'hard_alcohol'
+#df_hr_mean_alcohol_1.loc[df_hr_mean_alcohol_1['beer']==1, 'alcohol_type_1_drink'] = 'beer'
+#
+#sns.barplot(x='alcohol_type_1_drink', y='hr_mean', data=df_hr_mean_alcohol_1, 
+#            color='dodgerblue', alpha=.7)
+#plt.ylim(40,57)
 # raw means show that hard alcohol may be worst for hr
 # but when control for all other vars above, no difference statistically
 
@@ -2145,12 +2193,19 @@ df_hr_mean[df_hr_mean['hr_rest'].isnull()]
 df_hr_mean[df_hr_mean['hr_rest_min'].isnull()]
 # just 5 days missing. seem like random days. ok.
 
-df_hr_mean['hr_rest_next_day'] = df_hr_mean['hr_rest'].shift(-1)
-df_hr_mean['hr_rest_min_next_day'] = df_hr_mean['hr_rest_min'].shift(-1)
+# create future lagged resting hr -- i.e., resting hr next day
+def create_lagged_future_date_variables(number_of_lags, date_variable, df):
+    for lag in list(range(1,number_of_lags+1)):
+        df['date_forward_'+str(lag)] = df[date_variable] + timedelta(days=lag)
+    return df
 
-df_hr_mean[['hr_rest', 'hr_rest_min', 
-            'hr_rest_next_day', 'hr_rest_min_next_day', 
-            'hr_mean']].corr()
+df_hr_mean = create_lagged_future_date_variables(1, 'date_sleep', df_hr_mean)
+df_hr_mean.head()
+
+df_hr_mean['hr_rest_next_day'] = df_hr_mean['date_forward_1'].map(date_to_hr_resting_dict)
+df_hr_mean['hr_rest_min_next_day'] = df_hr_mean['date_forward_1'].map(date_to_hr_resting_minimum_dict)
+
+df_hr_mean[['date_sleep', 'hr_rest', 'hr_rest_next_day', 'hr_mean']].corr()
 # raw corr suggesting that sleeping hr might be more affected by prior 
 # day hr than it affects next day hr?! though both high corrs.
 
@@ -2159,16 +2214,1353 @@ plt.scatter(x='hr_mean', y='hr_rest_next_day', data=df_hr_mean, alpha=.25)
 sns.lmplot(x='hr_mean', y='hr_rest_next_day', data=df_hr_mean, 
            scatter_kws={'alpha':.25}, x_partial='hr_rest', y_partial='hr_rest')
 
-
+df_hr_mean.columns
 
 # =========
 # LEFT OFF
-df_hr_mean.to_pickle('df_hr_mean_w_resting_hr.pkl')
+#df_hr_mean.to_pickle('df_hr_mean_w_resting_hr.pkl')
 # =========
+df_hr_mean = pd.read_pickle('df_hr_mean_w_resting_hr.pkl')
+df_hr_mean.shape
+df_hr_mean.columns
+df_hr_mean.head()
+
+len(df_hr_mean[(df_hr_mean['hr_mean_lag1'].notnull()) & 
+               (df_hr_mean['hr_mean_lag2'].notnull()) & 
+               (df_hr_mean['hr_mean_lag3'].notnull()) & 
+               (df_hr_mean['hr_rest_next_day'].notnull())])
+# all the lags drastically cut down on sample size. impute?
+# should the appraoch to imputing depend on the particular anys?
+# for now, just anys when there's data an don't impute
+df_hr_mean[['date_sleep', 'hr_mean', 'hr_mean_lag1', 'hr_rest_next_day']]
+
+sns.relplot(x='date_sleep', y='hr_mean_lag1', data=df_hr_mean[df_hr_mean.index<50], kind='line')
+dftest = df_hr_mean[df_hr_mean.index<50]
+plt.plot(dftest['date_sleep'], dftest['hr_mean_lag1'])
+plt.xticks(rotation=30)
+
+
+# ----------    
+# examine relationship between resting hr and resting hr the next day
+# cubic? or something like that? because if high resting hr, it's easier
+# to reduce it the next day, vs. if resting hr is already low.
+plt.scatter(df_hr_mean['hr_rest'], 
+            df_hr_mean['hr_rest_next_day'], alpha=.25, color='dodgerblue')
+
+sns.lmplot(x='hr_rest', y='hr_rest_next_day', 
+           data=df_hr_mean, scatter_kws={'alpha':.25, 'color':'dodgerblue'},
+           order=3)
+plt.xlim(50,80)
+plt.ylim(50,80)
+
+sns.lmplot(x='hr_rest', y='hr_rest_next_day', 
+           data=df_hr_mean, scatter_kws={'alpha':.25, 'color':'dodgerblue'},
+           x_bins=20)
+
+
+plt.plot(df_hr_mean['hr_rest'].rolling(30).mean(), alpha=.6)
+plt.xticks(fontsize=20)
+plt.yticks(fontsize=20)
+
+# kind of saying a couple things. 1 - looks like when hr today is low,
+# that the body is pretty stable because don't tend to get huge changes
+# in hr the next day, even in the upward direction. can see that the
+# variance around the regression line is smaller on the far left side.
+# that might be pretty cool -- that at some point when healthy, it's not
+# too easily undone. on right side, with high hr today, see lot of variability
+# for hr the next day. come back to this. ideally, shouldn't i get the 
+# distribution of hr over the regession line (like something raaz was
+# working on) and score hr the next day based on the pctile of where in 
+# that distirbution the next day's hr falls? because with the way the
+# data is now, i think i'll be examining largely whether good sleep 
+# reduces hr when resting hr was mid to high the previous day. but
+# what about when hr was low the prior day? what's the effect of a 
+# good night sleep? not sure i'll be able to tell the way the data is now.
+
+# think i should use cubit to model the lag, or at least quadratic
+# because can see it fits the data much better
+results = smf.ols(formula = """hr_rest_next_day ~ hr_rest""",
+                  data=df_hr_mean).fit()  
+print(results.summary())  # adj r sq = 0.082
+
+results = smf.ols(formula = """hr_rest_next_day ~ hr_rest + I(hr_rest**2) + I(hr_rest**3)""",
+                  data=df_hr_mean).fit()  
+print(results.summary())  # adj r sq = 0.101
+
+results = smf.ols(formula = """hr_rest_next_day ~ hr_rest + I(hr_rest**2)""",
+                  data=df_hr_mean).fit()  
+print(results.summary())  # adj r sq = 0.103
+
+results = smf.ols(formula = """hr_rest_next_day ~ hr_rest + I(hr_rest**2) + 
+                  I(hr_rest**3) + I(hr_rest**4)""",
+                  data=df_hr_mean).fit()  
+print(results.summary())  # adj r sq = 0.103
+
+# quadratic definitelyl fits better than just the linear
+
+#df_hr_mean = df_hr_mean[(df_hr_mean['hr_rest'].notnull()) & (df_hr_mean['hr_rest_next_day'].notnull())]
+#df_hr_mean['hr_rest_round'] = df_hr_mean['hr_rest'].round(0)
+#df_hr_mean['hr_rest_round'] = df_hr_mean['hr_rest_round'].astype(int)
+
+# bin 'hr_rest'
+df_hr_mean['hr_rest'].min()
+df_hr_mean['hr_rest'].max()
+
+#custom_bucket_array = custom_bucket_array = np.linspace(53, 81, 2)
+def plot_relationship_with_bins(df_hr_mean, bin_size):
+    custom_bucket_array = np.arange(52, 82, bin_size)
+    df_hr_mean['hr_rest_bins'] = pd.cut(df_hr_mean['hr_rest'], custom_bucket_array)
+    sns.barplot(x='hr_rest_bins', y='hr_rest_next_day', data=df_hr_mean, 
+                color='dodgerblue', alpha=.6, errcolor='grey')
+    plt.xticks(rotation=60)
+    plt.ylim(40,70)
+    
+plot_relationship_with_bins(df_hr_mean, 4)
+plot_relationship_with_bins(df_hr_mean, 3)
+# not the s-shape I was expecting. Yes, the higher the prior day's
+# resting hr, the more likely the next day's is going to be lower.
+# but lower resting hr doesn't predict an increasing likelihood of
+# next day's hr being higher.
+plot_relationship_with_bins(df_hr_mean, 2)
+plot_relationship_with_bins(df_hr_mean, 1)
+plot_relationship_with_bins(df_hr_mean, .5)
+plt.ylim(50,70)
+
+# i should try logging the diffs between each day and the next
+# to "stationarize" the data and would that take into account
+# large differences emerging from certain ranges of day 1 hr?
+#results = smf.ols(formula = 'hr_rest_next_day ~ hr_rest', data=df_hr_mean).fit()
+#print(results.summary())
+#plt.hist(results.resid)
+
+# EXAMINE SLEEP QUALITY METIRICS (HR-WHILE-SLEEPING AND OTHERS) ON RESTING HR
+# CONTROLLING FOR LAGGED VARS (ACCOUNTING FOR THAT CURVILINEAR RLEATION BETWEEN
+# PRIOR RESITNG HR AND FUTURE RESTING HR) AND CONFOUNDS.
+
+df_hr_mean.columns
+
+results = smf.ols(formula = 'hr_rest_next_day ~ hr_rest', data=df_hr_mean).fit()
+print(results.summary())
+
+results = smf.ols(formula = """hr_rest_next_day ~ hr_rest + I(hr_rest**2) + 
+                  hr_mean + hr_mean_lag1 + temp + month_ts + start_sleep_time +  
+                  tue + wed + thu + fri + sat + sun""",  #  + alcohol + alcohol_lag1 
+                  data=df_hr_mean).fit()
+print(results.summary())
+# hr_mean, which is sleeping hr is the biggest driver here
+# + I(hr_rest**2) + I(hr_rest**3)
+# hr_rest + 
+# hr_rest_min
+# hr_rest_next_day
+# hr_rest_min_next_day
+#results = smf.ols(formula = """hr_rest_next_day ~ hr_mean""",  #  + alcohol + alcohol_lag1 
+#                  data=df_hr_mean).fit()
+#print(results.summary())
+
+# look at other sleep metrics - 
+# general approach -- get date to metric dictionary
+# then can map onto lagged version of the date to get 
+# lagged variables even if there are gaps in the dates/timeseries
+
+# min_asleep = number of minutes asleep that night
+date_to_minutes_alseep_dict = dict(zip(df_hr_mean['date_sleep'], df_hr_mean['min_asleep']))
+
+# get times awake during sleep period (sort of an efficicncy of sleep)
+# this dict has the minutes between start and end points of sleep 
+# and so includes times in between when i woke up
+with open('date_to_min_within_sleep_dict.pkl', 'rb') as picklefile:
+    date_to_min_within_sleep_dict = pickle.load(picklefile)
+
+df_hr_mean['minutes_within_sleep'] = df_hr_mean['date_sleep'].map(date_to_min_within_sleep_dict)
+
+# both may be important
+df_hr_mean[['minutes_within_sleep', 'min_asleep']].corr()
+
+
+# create new sleep metrics from min-by-min data
+df_sleep_8_to_11_resampled = pd.read_pickle('df_sleep_8_to_11_resampled.pkl')
+df_sleep_8_to_11_resampled.shape
+df_sleep_8_to_11_resampled.columns
+
+df_sleep_8_to_11_resampled[['date_time', 'awake', 'restless', 'hr_clean']]
+# look at restless over time
+df_sleep_8_to_11_resampled[['start_of_date_sleep', 'start_sleep_occurs_before', 
+                            'sleep_session', 'start_sleep', 'end_sleep']].head()
+df_sleep_8_to_11_resampled[['start_of_date_sleep', 'start_sleep_occurs_before', 
+                            'sleep_session', 'start_sleep', 'end_sleep']].tail()
+
+# get amount of rem and deep and light sleep each night
+# then get hr for each. and save dicts.
+
+df_sleep_8_to_11_resampled['deep']
+df_sleep_8_to_11_resampled.groupby('date_sleep')['deep'].apply(lambda x: sum(x))
+# and divide these by 2 to get minutes
+
+# if nans, it sums to np.nan. so fill nans with 0s
+df_sleep_8_to_11_resampled['deep'].replace(np.nan, 0, inplace=True)
+
+df_deep = df_sleep_8_to_11_resampled.groupby('date_sleep')['deep'].apply(lambda x: sum(x)).reset_index()
+df_deep = df_deep[df_deep['deep']>0]
+df_deep['deep'] = df_deep['deep'] / 2
+df_deep.hist(alpha=.75)
+plt.grid(False)
+
+date_sleep_to_deep_minutes_dict = dict(zip(df_deep['date_sleep'], df_deep['deep']))
+# save dict
+with open('date_sleep_to_deep_minutes_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_sleep_to_deep_minutes_dict, picklefile)
+
+
+# if nans, it sums to np.nan. so fill nans with 0s
+df_sleep_8_to_11_resampled['rem'].replace(np.nan, 0, inplace=True)
+df_rem = df_sleep_8_to_11_resampled.groupby('date_sleep')['rem'].apply(lambda x: sum(x)).reset_index()
+
+df_rem = df_rem[df_rem['rem']>0]
+df_rem['rem'] = df_rem['rem'] / 2
+df_rem.hist(alpha=.75)
+plt.grid(False)
+
+date_sleep_to_rem_minutes_dict = dict(zip(df_rem['date_sleep'], df_rem['rem']))
+# save dict
+with open('date_sleep_to_rem_minutes_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_sleep_to_rem_minutes_dict, picklefile)
+
+plt.hist(df_rem['rem'], alpha=.35)
+plt.hist(df_deep['deep'], alpha=.35)
+plt.grid(False)
+
+
+# if nans, it sums to np.nan. so fill nans with 0s
+df_sleep_8_to_11_resampled['light'].replace(np.nan, 0, inplace=True)
+df_light = df_sleep_8_to_11_resampled.groupby('date_sleep')['light'].apply(lambda x: sum(x)).reset_index()
+
+df_light = df_light[df_light['light']>0]
+df_light['light'] = df_light['light'] / 2
+df_light.hist(alpha=.75)
+plt.grid(False)
+
+date_sleep_to_light_minutes_dict = dict(zip(df_light['date_sleep'], df_light['light']))
+# save dict
+with open('date_sleep_to_light_minutes_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_sleep_to_light_minutes_dict, picklefile)
+
+
+# if nans, it sums to np.nan. so fill nans with 0s
+df_sleep_8_to_11_resampled['restless'].replace(np.nan, 0, inplace=True)
+df_restless = df_sleep_8_to_11_resampled.groupby('date_sleep')['restless'].apply(lambda x: sum(x)).reset_index()
+
+df_restless = df_restless[df_restless['restless']>0]
+df_restless['restless'] = df_restless['restless'] / 2
+df_restless.hist(alpha=.75)
+plt.grid(False)
+
+date_sleep_to_restless_minutes_dict = dict(zip(df_restless['date_sleep'], df_restless['restless']))
+# save dict
+with open('date_sleep_to_restless_minutes_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_sleep_to_restless_minutes_dict, picklefile)
+
+# look at over time
+plt.plot(df_restless['date_sleep'], df_restless['restless'].rolling(window=30).mean())
+# has it changed much over time? maybe ok to use?
+
+
+# ------
+# create smoothness/variability of hr for each night metrics
+df_hr_notnull = df_sleep_8_to_11_resampled[df_sleep_8_to_11_resampled['hr_clean'].notnull()]
+df_std_daily = df_hr_notnull.groupby('date_sleep')['hr_clean'].apply(lambda x: x.std()).reset_index()
+plt.plot(df_std_daily['date_sleep'], df_std_daily['hr_clean'].rolling(window=30).mean())
+date_sleep_to_hr_std_dict = dict(zip(df_std_daily['date_sleep'], df_std_daily['hr_clean']))
+# save dict
+with open('date_sleep_to_hr_std_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_sleep_to_hr_std_dict, picklefile)
+# pretty sure std and mean are correlated. adj for mean?
+# other ways to get smoothness? within certain frequencies?
+
+
+# ------
+# hr in sleep stages
+df_deep_hr = df_hr_notnull.groupby(['date_sleep', 'deep'])['hr_clean'].apply(lambda x: np.mean(x)).reset_index()
+df_deep_hr = df_deep_hr[df_deep_hr['deep']==1]
+df_deep_hr = df_deep_hr[df_deep_hr['hr_clean']>0]
+df_deep_hr['hr_clean'].hist(alpha=.75)
+plt.grid(False)
+plt.axvline(df_deep_hr['hr_clean'].mean(), linestyle='--', alpha=.5, color='black')
+
+date_sleep_to_deep_hr_dict = dict(zip(df_deep_hr['date_sleep'], df_deep_hr['hr_clean']))
+# save dict
+with open('date_sleep_to_deep_hr_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_sleep_to_deep_hr_dict, picklefile)
+
+df_deep_hr_std = df_hr_notnull.groupby(['date_sleep', 'deep'])['hr_clean'].apply(lambda x: np.std(x)).reset_index()
+df_deep_hr_std = df_deep_hr_std[df_deep_hr_std['deep']==1]
+df_deep_hr_std = df_deep_hr_std[df_deep_hr_std['hr_clean']>0]
+df_deep_hr_std['hr_clean'].hist(alpha=.75)
+plt.grid(False)
+plt.axvline(df_deep_hr_std['hr_clean'].mean(), linestyle='--', alpha=.5, color='black')
+
+date_sleep_to_deep_hr_std_dict = dict(zip(df_deep_hr_std['date_sleep'], df_deep_hr_std['hr_clean']))
+# save dict
+with open('date_sleep_to_deep_hr_std_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_sleep_to_deep_hr_std_dict, picklefile)
+
+df_deep = df_hr_notnull[df_hr_notnull['deep']==1]
+df_deep = df_deep.sort_values(by='date_time')
+df_deep['hr_deep_ewm_from_wake'] = df_deep.groupby('date_sleep')['hr_clean'].transform(lambda x: x.ewm(span=10, min_periods=10).mean())
+df_deep_hr_ewm_from_wake = df_deep.groupby('date_sleep')['hr_deep_ewm_from_wake'].apply(lambda x: x.tail(1)).reset_index()
+df_deep_hr_ewm_from_wake['hr_deep_ewm_from_wake'].hist(alpha=.75)
+plt.grid(False)
+date_sleep_to_deep_hr_ewm_from_wake_dict = dict(zip(df_deep_hr_ewm_from_wake['date_sleep'], df_deep_hr_ewm_from_wake['hr_deep_ewm_from_wake']))
+# save dict
+with open('date_sleep_to_deep_hr_ewm_from_wake_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_sleep_to_deep_hr_ewm_from_wake_dict, picklefile)
+
+df_deep = df_deep.sort_values(by='date_time', ascending=False)
+df_deep['hr_deep_ewm_from_onset'] = df_deep.groupby('date_sleep')['hr_clean'].transform(lambda x: x.ewm(span=10, min_periods=10).mean())
+df_deep_hr_ewm_from_onset = df_deep.groupby('date_sleep')['hr_deep_ewm_from_onset'].apply(lambda x: x.tail(1)).reset_index()
+df_deep_hr_ewm_from_onset['hr_deep_ewm_from_onset'].hist(alpha=.75)
+plt.grid(False)
+date_sleep_to_deep_hr_ewm_from_onset_dict = dict(zip(df_deep_hr_ewm_from_onset['date_sleep'], df_deep_hr_ewm_from_onset['hr_deep_ewm_from_onset']))
+# save dict
+with open('date_sleep_to_deep_hr_ewm_from_onset_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_sleep_to_deep_hr_ewm_from_onset_dict, picklefile)
+
+
+df_rem_hr = df_hr_notnull.groupby(['date_sleep', 'rem'])['hr_clean'].apply(lambda x: np.mean(x)).reset_index()
+df_rem_hr = df_rem_hr[df_rem_hr['rem']==1]
+df_rem_hr = df_rem_hr[df_rem_hr['hr_clean']>0]
+df_rem_hr['hr_clean'].hist(alpha=.75)
+plt.grid(False)
+plt.axvline(df_rem_hr['hr_clean'].mean(), linestyle='--', alpha=.5, color='black')
+
+date_sleep_to_rem_hr_dict = dict(zip(df_rem_hr['date_sleep'], df_rem_hr['hr_clean']))
+# save dict
+with open('date_sleep_to_rem_hr_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_sleep_to_rem_hr_dict, picklefile)
+
+df_rem_hr_std = df_hr_notnull.groupby(['date_sleep', 'rem'])['hr_clean'].apply(lambda x: np.std(x)).reset_index()
+df_rem_hr_std = df_rem_hr_std[df_rem_hr_std['rem']==1]
+df_rem_hr_std = df_rem_hr_std[df_rem_hr_std['hr_clean']>0]
+df_rem_hr_std['hr_clean'].hist(alpha=.75)
+plt.grid(False)
+plt.axvline(df_rem_hr_std['hr_clean'].mean(), linestyle='--', alpha=.5, color='black')
+
+date_sleep_to_rem_hr_std_dict = dict(zip(df_rem_hr_std['date_sleep'], df_rem_hr_std['hr_clean']))
+# save dict
+with open('date_sleep_to_rem_hr_std_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_sleep_to_rem_hr_std_dict, picklefile)
+
+df_rem = df_hr_notnull[df_hr_notnull['rem']==1]
+df_rem = df_rem.sort_values(by='date_time')
+df_rem['hr_rem_ewm_from_wake'] = df_rem.groupby('date_sleep')['hr_clean'].transform(lambda x: x.ewm(span=10, min_periods=10).mean())
+df_rem_hr_ewm_from_wake = df_rem.groupby('date_sleep')['hr_rem_ewm_from_wake'].apply(lambda x: x.tail(1)).reset_index()
+df_rem_hr_ewm_from_wake['hr_rem_ewm_from_wake'].hist(alpha=.75)
+plt.grid(False)
+date_sleep_to_rem_hr_ewm_from_wake_dict = dict(zip(df_rem_hr_ewm_from_wake['date_sleep'], df_rem_hr_ewm_from_wake['hr_rem_ewm_from_wake']))
+# save dict
+with open('date_sleep_to_rem_hr_ewm_from_wake_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_sleep_to_rem_hr_ewm_from_wake_dict, picklefile)
+
+df_rem = df_rem.sort_values(by='date_time', ascending=False)
+df_rem['hr_rem_ewm_from_onset'] = df_rem.groupby('date_sleep')['hr_clean'].transform(lambda x: x.ewm(span=10, min_periods=10).mean())
+df_rem_hr_ewm_from_onset = df_rem.groupby('date_sleep')['hr_rem_ewm_from_onset'].apply(lambda x: x.tail(1)).reset_index()
+df_rem_hr_ewm_from_onset['hr_rem_ewm_from_onset'].hist(alpha=.75)
+plt.grid(False)
+date_sleep_to_rem_hr_ewm_from_onset_dict = dict(zip(df_rem_hr_ewm_from_onset['date_sleep'], df_rem_hr_ewm_from_onset['hr_rem_ewm_from_onset']))
+# save dict
+with open('date_sleep_to_rem_hr_ewm_from_onset_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_sleep_to_rem_hr_ewm_from_onset_dict, picklefile)
+
+
+df_light_hr = df_hr_notnull.groupby(['date_sleep', 'light'])['hr_clean'].apply(lambda x: np.mean(x)).reset_index()
+df_light_hr = df_light_hr[df_light_hr['light']==1]
+df_light_hr = df_light_hr[df_light_hr['hr_clean']>0]
+df_light_hr['hr_clean'].hist(alpha=.75)
+plt.grid(False)
+plt.axvline(df_light_hr['hr_clean'].mean(), linestyle='--', alpha=.5, color='black')
+
+date_sleep_to_light_hr_dict = dict(zip(df_light_hr['date_sleep'], df_light_hr['hr_clean']))
+# save dict
+with open('date_sleep_to_light_hr_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_sleep_to_light_hr_dict, picklefile)
+
+df_light_hr_std = df_hr_notnull.groupby(['date_sleep', 'light'])['hr_clean'].apply(lambda x: np.std(x)).reset_index()
+df_light_hr_std = df_light_hr_std[df_light_hr_std['light']==1]
+df_light_hr_std = df_light_hr_std[df_light_hr_std['hr_clean']>0]
+df_light_hr_std['hr_clean'].hist(alpha=.75)
+plt.grid(False)
+plt.axvline(df_light_hr_std['hr_clean'].mean(), linestyle='--', alpha=.5, color='black')
+
+date_sleep_to_light_hr_std_dict = dict(zip(df_light_hr_std['date_sleep'], df_light_hr_std['hr_clean']))
+# save dict
+with open('date_sleep_to_light_hr_std_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_sleep_to_light_hr_std_dict, picklefile)
+
+df_light = df_hr_notnull[df_hr_notnull['light']==1]
+df_light = df_light.sort_values(by='date_time')
+df_light['hr_light_ewm_from_wake'] = df_light.groupby('date_sleep')['hr_clean'].transform(lambda x: x.ewm(span=10, min_periods=10).mean())
+df_light_hr_ewm_from_wake = df_light.groupby('date_sleep')['hr_light_ewm_from_wake'].apply(lambda x: x.tail(1)).reset_index()
+df_light_hr_ewm_from_wake['hr_light_ewm_from_wake'].hist(alpha=.75)
+plt.grid(False)
+date_sleep_to_light_hr_ewm_from_wake_dict = dict(zip(df_light_hr_ewm_from_wake['date_sleep'], df_light_hr_ewm_from_wake['hr_light_ewm_from_wake']))
+# save dict
+with open('date_sleep_to_light_hr_ewm_from_wake_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_sleep_to_light_hr_ewm_from_wake_dict, picklefile)
+
+df_light = df_light.sort_values(by='date_time', ascending=False)
+df_light['hr_light_ewm_from_onset'] = df_light.groupby('date_sleep')['hr_clean'].transform(lambda x: x.ewm(span=10, min_periods=10).mean())
+df_light_hr_ewm_from_onset = df_light.groupby('date_sleep')['hr_light_ewm_from_onset'].apply(lambda x: x.tail(1)).reset_index()
+df_light_hr_ewm_from_onset['hr_light_ewm_from_onset'].hist(alpha=.75)
+plt.grid(False)
+date_sleep_to_light_hr_ewm_from_onset_dict = dict(zip(df_light_hr_ewm_from_onset['date_sleep'], df_light_hr_ewm_from_onset['hr_light_ewm_from_onset']))
+# save dict
+with open('date_sleep_to_light_hr_ewm_from_onset_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_sleep_to_light_hr_ewm_from_onset_dict, picklefile)
+
+
+plt.hist(df_rem_hr['hr_clean'], alpha=.35, color='orange', label='rem hr')
+plt.hist(df_deep_hr['hr_clean'], alpha=.35, color='dodgerblue', label='deep hr')
+plt.grid(False)
+plt.legend()
+
+plt.hist(df_rem_hr['hr_clean'], alpha=.35, color='orange', label='rem hr')
+plt.hist(df_light_hr['hr_clean'], alpha=.35, color='dodgerblue', label='light hr')
+plt.grid(False)
+plt.legend()
+
+plt.hist(df_deep_hr['hr_clean'], alpha=.35, color='dodgerblue', label='deep hr')
+plt.hist(df_light_hr['hr_clean'], alpha=.35, color='orange', label='light hr')
+plt.grid(False)
+plt.legend()
+
+df_deep_hr['hr_clean'].mean()
+df_light_hr['hr_clean'].mean()
+
+
+# ------
+# hr at diff points in the night - early, mid, late, etc.
+# how to measure? 
+# hr first hour, hr last hour
+# better -- weighted ewm from start and weighted ewm from end
+# though might worry about that hr lip from waking? how to deal with that?
+# cut off the final 15 min before waking? 
+# but also compute hr in that final 15 min as separate metric.
+# can get the data from those plots from sleep onset and waking graphs
+# hr first hour, hr second hour, hr third hour, etc. but this could
+# be weird and could be weird in conjuction with sleep stages.
+# could map out my own sleep stages and get at rem/deep occurances
+# e.g., deep/rem hr first occurance, deep/rem hr second occurrence, etc.
+# that would get at hr at diff points in the night while controlling
+# for sleep stage.  
+df_hr_notnull.head()
+ 
+df_asleep = pd.read_pickle('df_asleep.pkl')
+df_asleep.head()
+df_asleep[['date_time', 'hr_clean']]
+df_asleep = df_asleep[df_asleep['hr_clean'].notnull()]
+df_asleep.columns
+df_asleep[['date_time', 'hr_clean', 'minutes_from_waking', 'minutes_asleep']]
+# guess the min from sleep onset and from waking dont matter?
+# for computing ewm from sleep onset and from waking? figout out 
+# how and look up ewm.
+
+df_asleep = df_asleep.sort_values(by='date_time')
+df_asleep['hr_ewm_span_60_from_wake'] = df_asleep.groupby('date_sleep')['hr_clean'].transform(lambda x: x.ewm(span=60, min_periods=180).mean())
+df_asleep['hr_ewm_halflife_120_from_wake'] = df_asleep.groupby('date_sleep')['hr_clean'].transform(lambda x: x.ewm(halflife=120, min_periods=180).mean())
+df_asleep[['hr_clean', 'hr_ewm_span_60_from_wake', 'hr_ewm_halflife_120_from_wake']].tail()
+
+df_asleep_reversed = df_asleep.sort_values(by='date_time', ascending=False)
+df_asleep['date_time']
+df_asleep_reversed['date_time']
+df_asleep_reversed['hr_ewm_span_60_from_onset'] = df_asleep_reversed.groupby('date_sleep')['hr_clean'].transform(lambda x: x.ewm(span=60, min_periods=180).mean())
+df_asleep_reversed['hr_ewm_halflife_120_from_onset'] = df_asleep_reversed.groupby('date_sleep')['hr_clean'].transform(lambda x: x.ewm(halflife=120, min_periods=180).mean())
+
+df_span_from_wake = df_asleep.groupby('date_sleep')['hr_ewm_span_60_from_wake'].apply(lambda x: x.tail(1)).reset_index()
+df_halflife_from_wake = df_asleep.groupby('date_sleep')['hr_ewm_halflife_120_from_wake'].apply(lambda x: x.tail(1)).reset_index()
+df_span_from_onset = df_asleep_reversed.groupby('date_sleep')['hr_ewm_span_60_from_onset'].apply(lambda x: x.tail(1)).reset_index()
+df_halflife_from_onset = df_asleep_reversed.groupby('date_sleep')['hr_ewm_halflife_120_from_onset'].apply(lambda x: x.tail(1)).reset_index()
+
+date_to_span_from_wake_dict = dict(zip(df_span_from_wake['date_sleep'], df_span_from_wake['hr_ewm_span_60_from_wake']))
+date_to_halflife_from_wake_dict = dict(zip(df_halflife_from_wake['date_sleep'], df_halflife_from_wake['hr_ewm_halflife_120_from_wake']))
+date_to_span_from_onset_dict = dict(zip(df_span_from_onset['date_sleep'], df_span_from_onset['hr_ewm_span_60_from_onset']))
+date_to_halflife_from_onset_dict = dict(zip(df_halflife_from_onset['date_sleep'], df_halflife_from_onset['hr_ewm_halflife_120_from_onset']))
+
+plt.hist(df_span_from_wake['hr_ewm_span_60_from_wake'].dropna(), alpha=.3)
+plt.hist(df_halflife_from_wake['hr_ewm_halflife_120_from_wake'].dropna(), alpha=.3)
+plt.hist(df_span_from_onset['hr_ewm_span_60_from_onset'].dropna(), alpha=.3)
+plt.hist(df_halflife_from_onset['hr_ewm_halflife_120_from_onset'].dropna(), alpha=.3)
+
+# save dict
+with open('date_to_span_from_wake_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_to_span_from_wake_dict, picklefile)
+with open('date_to_halflife_from_wake_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_to_halflife_from_wake_dict, picklefile)
+with open('date_to_span_from_onset_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_to_span_from_onset_dict, picklefile)
+with open('date_to_halflife_from_onset_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_to_halflife_from_onset_dict, picklefile)
+
+
+
+# ----
+# plot hr by time after sleep onset. cols are ea day.
+# use actual time or time only asleep. start with asleep
+# from the df above that created the ts that showed the 
+# sleep stages. but then do with actual time, i.e., including
+# time that fitbit says awake during sleep session. to see how different.
+df_asleep.head()
+
+sns.relplot(x='minutes_asleep', y='hr_interpolate_clean', 
+            data=df_asleep,  # .sample(n=1000), 
+            kind='line', ci=95, hue='alcohol_tertile', alpha=.5,
+            palette=['green', 'orange', 'red'], 
+
+df_asleep[['date_time', 'hr_clean', 'minutes_from_waking', 'minutes_asleep']]
+df_asleep[df_asleep['hr_clean'].isnull()]
+
+df_asleep_for_heatmap = df_asleep.copy(deep=True)
+df_asleep_for_heatmap = df_asleep_for_heatmap.reset_index(drop=True)
+df_asleep_for_heatmap = df_asleep_for_heatmap[['date_sleep', 'date_time', 'hr_clean', 
+                                               'hr_interpolate_clean', 'minutes_asleep',
+                                               'sleep_session']]
+
+df_asleep_for_heatmap.groupby('date_sleep')['minutes_asleep'].max().max()
+
+df_asleep_for_heatmap[df_asleep_for_heatmap['minutes_asleep']==16.083333333333332]
+df_asleep_for_heatmap = df_asleep_for_heatmap[df_asleep_for_heatmap['date_sleep']!='2018-01-16']
+
+df_asleep_for_heatmap[df_asleep_for_heatmap['minutes_asleep']==14.408333333333333]
+df_asleep_for_heatmap = df_asleep_for_heatmap[df_asleep_for_heatmap['date_sleep']!='2017-12-23']
+
+df_asleep_for_heatmap[df_asleep_for_heatmap['minutes_asleep']==13.716666666666667]
+df_asleep_for_heatmap = df_asleep_for_heatmap[df_asleep_for_heatmap['date_sleep']!='2017-12-02']
+
+df_asleep_for_heatmap['sleep_session'].value_counts()
+df_asleep_for_heatmap = df_asleep_for_heatmap[df_asleep_for_heatmap['sleep_session']==1]
+
+#max_hours = df_asleep_for_heatmap.groupby('date_sleep')['minutes_asleep'].max().max()
+#date_sleep = df_asleep_for_heatmap[df_asleep_for_heatmap['minutes_asleep']==max_hours]['date_sleep'].values[0]
+#df_date_sleep_base = df_asleep_for_heatmap[df_asleep_for_heatmap['date_sleep']==date_sleep]
+#df_date_sleep_base = df_date_sleep_base.set_index('minutes_asleep')
+#df_date_sleep_base = df_date_sleep_base[['hr_clean']]
+#df_date_sleep_base.columns = ['hr_clean_base']
+
+# create a df with min/hrs asleep df as index, thorugh 10 hours or something
+x = df_asleep_for_heatmap['minutes_asleep'].unique()
+x = np.sort(x)
+df_date_sleep_base = pd.DataFrame(data=x, index=x)
+
+for date_sleep in df_asleep_for_heatmap['date_sleep'].unique()[:]:
+    df_date_sleep = df_asleep_for_heatmap[df_asleep_for_heatmap['date_sleep']==date_sleep]
+    df_date_sleep = df_date_sleep.set_index('minutes_asleep')
+    df_date_sleep = df_date_sleep[['hr_clean']]
+    df_date_sleep.columns = ['hr_clean_'+str(date_sleep)[:10]]
+    df_date_sleep_base = df_date_sleep_base.join(df_date_sleep)
+
+del df_date_sleep_base[0]
+df_date_sleep_base.index = np.round(df_date_sleep_base.index, 3)
+# necessary? no.
+#df_date_sleep_base.replace(np.nan, 0, inplace=True)
+
+#df_date_sleep_base = df_date_sleep_base[df_date_sleep_base.index<9]
+
+#cmap_enter = sns.diverging_palette(15, 125, sep=10, s=70, l=50, as_cmap=True)
+cmap_enter = sns.diverging_palette(125, 15, sep=10, s=70, l=50, as_cmap=True)
+cmap_enter="YlGnBu"
+
+for col in df_date_sleep_base.columns:
+    df_date_sleep_base[col] = df_date_sleep_base[col].interpolate(limit=1)
+
+df_date_sleep_base.head()
+df_date_sleep_base.tail()
+
+fig = plt.figure(figsize=(10, 8))  
+ax = sns.heatmap(df_date_sleep_base, cmap=cmap_enter)
+plt.xticks([])
+ax.xaxis.set_label_position("top") 
+plt.xlabel('Days\n2017-05                             2018-01                             2018-09', 
+           fontsize=16)
+plt.ylabel('Hours from Sleep Onset', fontsize=16)
+plt.ylim(1200,0)
+#plt.yticks(fontsize=14)
+
+df_asleep_for_heatmap['date_sleep'].min()
+df_asleep_for_heatmap['date_sleep'].max()
+
+# can i also create actual time from sleep onset (i.e., include the wake times)
+# does this look any different?
+# to do, resample by minute. now in real time, even if awake sometimes.
+# then get minutes from sleep onset. do one keeping hr from awake. can see
+# when i wake up and hr spikes. and one with these awake hr as null.
+# can i plot the fitbit rem and deep over mine?
+df_sleep_8_to_11_resampled.head()
+
+# select just first sleep period and then only if greater than a certain amount of time?
+# or i could groupby sleep sessions too? but plot all? seems ok?
+# start by just selecting sleep sessoin 1.
+df_sleep_8_to_11_resampled['sleep_session'].value_counts()
+df_sleep_hr_for_heatmap = df_sleep_8_to_11_resampled[df_sleep_8_to_11_resampled['sleep_session']==1]
+#df_sleep_hr_for_heatmap = df_sleep_8_to_11_resampled.copy(deep=True)
+
+len(df_sleep_hr_for_heatmap.groupby('date_sleep').resample('30S', on='date_time').mean())  # 457006
+len(df_sleep_hr_for_heatmap.groupby('date_sleep').resample('1min', on='date_time').mean())  # 228729
+
+df_sleep_hr_for_heatmap = df_sleep_hr_for_heatmap.groupby('date_sleep').resample('1min', on='date_time').mean().reset_index()
+df_sleep_hr_for_heatmap.head()
+df_sleep_hr_for_heatmap['hr_clean']  # plenty of nulls. but should be ok.
+df_sleep_hr_for_heatmap[df_sleep_hr_for_heatmap['awake']]
+df_sleep_hr_for_heatmap['awake'].value_counts(normalize=True)
+df_sleep_hr_for_heatmap[df_sleep_hr_for_heatmap['awake'].isnull()]
+
+df_sleep_hr_for_heatmap.columns
+df_sleep_hr_for_heatmap[['start_sleep', 'start_of_date_sleep']]  # the same?
+# new col for each date sleep that has time of sleep onset
+# then subtract from each time. should work?
+df_first_minute_each_date_sleep = df_sleep_hr_for_heatmap[df_sleep_hr_for_heatmap['start_of_date_sleep']==1]
+len(df_first_minute_each_date_sleep)
+len(df_sleep_hr_for_heatmap['date_sleep'].unique())
+
+date_sleep_to_first_time_dict = dict(zip(df_first_minute_each_date_sleep['date_sleep'], df_first_minute_each_date_sleep['date_time']))
+df_sleep_hr_for_heatmap['time_of_sleep_onset'] = df_sleep_hr_for_heatmap['date_sleep'].map(date_sleep_to_first_time_dict)
+df_sleep_hr_for_heatmap[['date_sleep', 'date_time', 'time_of_sleep_onset']]
+
+df_sleep_hr_for_heatmap['hours_since_sleep_onset'] = (
+        df_sleep_hr_for_heatmap['date_time'] - df_sleep_hr_for_heatmap['time_of_sleep_onset'] ) /  np.timedelta64(1, 'h')
+
+df_sleep_hr_for_heatmap[['date_time', 'time_of_sleep_onset', 'hours_since_sleep_onset']]
+
+df_sleep_hr_for_heatmap.groupby('date_sleep')['hours_since_sleep_onset'].max().hist(bins=15, alpha=.7)
+plt.grid(False)
+print(df_sleep_hr_for_heatmap['hours_since_sleep_onset'].mean())
+# some nights with very little sleep. presume first of two sleep sessions?
+# cut out after graphing.
+
+df_sleep_hr_for_heatmap['hours_sleep'] = df_sleep_hr_for_heatmap.groupby('date_sleep')['hours_since_sleep_onset'].transform(lambda x: x.max())
+df_sleep_hr_for_heatmap.groupby('date_sleep')['hours_sleep'].mean().hist(bins=15, alpha=.7)
+plt.grid(False)
+
+# remove days with fewer than 4 hours sleep
+len(df_sleep_hr_for_heatmap['date_sleep'].unique())
+df_sleep_hr_for_heatmap = df_sleep_hr_for_heatmap[df_sleep_hr_for_heatmap['hours_sleep']>=4]
+
+df_sleep_hr_for_heatmap[df_sleep_hr_for_heatmap['date_sleep']=='2018-01-16']['hours_since_sleep_onset'].max()
+# this had 16 hours since onset when look at both sleep sessions, i think
+
+# functions to plot
+def plot_hr_sleep_heatmap(df_sleep_hr_for_heatmap, metric):
+    x = df_sleep_hr_for_heatmap['hours_since_sleep_onset'].unique()
+    x = np.sort(x)
+    df_date_sleep_base = pd.DataFrame(data=x, index=x)
+    date_list = np.sort(df_sleep_hr_for_heatmap['date_sleep'].unique()[:])
+    for date_sleep in date_list:
+        df_date_sleep = df_sleep_hr_for_heatmap[df_sleep_hr_for_heatmap['date_sleep']==date_sleep]
+        df_date_sleep = df_date_sleep.set_index('hours_since_sleep_onset')
+        df_date_sleep = df_date_sleep[[metric]]
+        df_date_sleep.columns = [metric+'_'+str(date_sleep)[:10]]
+        df_date_sleep_base = df_date_sleep_base.join(df_date_sleep)
+
+    del df_date_sleep_base[0]
+    df_date_sleep_base.index = np.round(df_date_sleep_base.index, 3)
+    return df_date_sleep_base
+
+df_sleep_hr_for_heatmap['awake'].value_counts()
+len(df_sleep_hr_for_heatmap[df_sleep_hr_for_heatmap['awake'].isnull()])
+
+#df_sleep_hr_for_heatmap_no_awake = df_sleep_hr_for_heatmap[df_sleep_hr_for_heatmap['awake']==0]
+df_date_sleep_base = plot_hr_sleep_heatmap(df_sleep_hr_for_heatmap, 'hr_clean')  # df_sleep_hr_for_heatmap  df_sleep_hr_for_heatmap_no_awake
+df_date_sleep_base.head()
+
+#len(df_date_sleep_base[df_date_sleep_base[df_date_sleep_base.columns].isnull()])
+#for col in df_date_sleep_base.columns:
+#    df_date_sleep_base[col] = df_date_sleep_base[col].interpolate(limit=1)
+# doesn't actually change the number of nulls
+
+df_sleep_hr_for_heatmap['hr_clean'].hist(bins=20, alpha=.7)
+plt.grid(False)
+
+def plot_heatmap_of_hr_over_each_night(df_date_sleep_base):
+    cmap_enter = sns.diverging_palette(125, 15, sep=10, s=70, l=50, 
+                                       center='light', as_cmap=True)
+    cmap_enter="YlGnBu"  
+    # this looks cooler. but green and red allows to see differnces better, allows to see increases in hr better
+    # actually, not really true alltogether. the red-green obscures diffs toward the center-midpoint
+    # the one shade is better for that
+    df_date_sleep_base.head()
+    df_date_sleep_base.tail()
+    fig = plt.figure(figsize=(10, 8))  
+    ax = sns.heatmap(df_date_sleep_base, cmap=cmap_enter, 
+                     vmin=40, vmax=80)
+    plt.xticks([])
+    ax.xaxis.set_label_position("top") 
+    plt.xlabel('Date\n2017-05                             2018-01                             2018-09', 
+               fontsize=16)
+    plt.ylabel('Hours from Sleep Onset', fontsize=16)
+    plt.ylim(600,0)
+    #plt.yticks(fontsize=14)
+
+plot_heatmap_of_hr_over_each_night(df_date_sleep_base)
+
+df_date_sleep_base.head()
+# could at do heat map of rem to see if it's at the 1.4 hour mark
+
+def plot_heatmap_of_rem_over_each_night(df_date_sleep_base):
+    cmap_enter = sns.diverging_palette(125, 15, sep=10, s=70, l=50, 
+                                       center='light', as_cmap=True)
+    #cmap_enter="YlGnBu"  
+    fig = plt.figure(figsize=(10, 8))  
+    ax = sns.heatmap(df_date_sleep_base, cmap=cmap_enter, alpha=.25)
+    plt.xticks([])
+    ax.xaxis.set_label_position("top") 
+    plt.xlabel('Date\n2017-05                             2018-01                             2018-09', 
+               fontsize=16)
+    plt.ylabel('Hours from Sleep Onset', fontsize=16)
+    plt.ylim(600,0)
+    #plt.yticks(fontsize=14)
+
+df_date_sleep_base = plot_hr_sleep_heatmap(df_sleep_hr_for_heatmap, 'rem')  # df_sleep_hr_for_heatmap  df_sleep_hr_for_heatmap_no_awake
+df_date_sleep_base = plot_hr_sleep_heatmap(df_sleep_hr_for_heatmap, 'deep')  # df_sleep_hr_for_heatmap  df_sleep_hr_for_heatmap_no_awake
+df_date_sleep_base = plot_hr_sleep_heatmap(df_sleep_hr_for_heatmap, 'hr_clean')  # df_sleep_hr_for_heatmap  df_sleep_hr_for_heatmap_no_awake
+
+plot_heatmap_of_rem_over_each_night(df_date_sleep_base)
+# i guess it does roughly match up with the hr increases
+
+# calculate hr increase for first rem, second rem, etc. and for deep.
+# should really do it because rem really stands out first time. so 
+# maybe that's especially telling?
+def plot_heatmap_of_rem_for_one_night(df_date_sleep_base, date, metric):
+    cmap_enter = sns.diverging_palette(125, 15, sep=10, s=70, l=50, 
+                                       center='light', as_cmap=True)
+    #cmap_enter="YlGnBu"  
+    df_date_sleep_base_date = df_date_sleep_base[[metric+'_'+str(date)]]
+    fig = plt.figure(figsize=(10, 8))  
+    ax = sns.heatmap(df_date_sleep_base_date, cmap=cmap_enter, alpha=.25)
+    plt.xticks([])
+    ax.xaxis.set_label_position("top") 
+    plt.ylabel('Hours from Sleep Onset', fontsize=16)
+    #plt.ylim(600,0)
+
+plot_heatmap_of_rem_for_one_night(df_date_sleep_base, '2018-07-11', 'rem')
+plot_heatmap_of_rem_for_one_night(df_date_sleep_base, '2018-07-12', 'rem')
+plot_heatmap_of_rem_for_one_night(df_date_sleep_base, '2018-07-13', 'rem')
+plot_heatmap_of_rem_for_one_night(df_date_sleep_base, '2018-07-14', 'rem')
+plot_heatmap_of_rem_for_one_night(df_date_sleep_base, '2018-07-17', 'rem')
+plot_heatmap_of_rem_for_one_night(df_date_sleep_base, '2018-07-18', 'rem')
+plot_heatmap_of_rem_for_one_night(df_date_sleep_base, '2018-07-19', 'rem')
+
+plot_heatmap_of_rem_for_one_night(df_date_sleep_base, '2018-07-10', 'hr_clean')
+plot_heatmap_of_rem_for_one_night(df_date_sleep_base, '2018-07-12', 'hr_clean')
+plot_heatmap_of_rem_for_one_night(df_date_sleep_base, '2018-07-13', 'hr_clean')
+plot_heatmap_of_rem_for_one_night(df_date_sleep_base, '2018-07-14', 'hr_clean')
+
+# though if computed my own hr from about 1.25 hours to 2.25 hours, 
+# i'd probably capture first rem. could compute max hr for 5 min here. 
+# could also compute the increase in hr. maybe that's not meaingful? 
+# could also get the max hr for 5 min for rem recorded by fitbit.
+# actually, get rem and deep and light sleep using ewm from sleep onset
+# and from waking, just like i did for entire night of hr. I did this above.
+# so good for now.
+
+
+# --------------
+# activity data
+# get the daily summary of activity. create date to steps, etc. dicts
+df_activity_summary = pd.read_pickle('df_activity_summary.pkl')
+df_activity_summary.shape
+df_activity_summary.head()
+
+df_activity_summary[['distance', 'steps']].corr()
+# not exactly the same, but pretty much. 
+# which means I should be able to cacluate
+# pace? distance / active-time
+# i.e., steps / time-with-steps-greater-than-zero
+
+date_to_distance_dict = dict(zip(df_activity_summary['date'], df_activity_summary['distance']))
+date_to_elevation_dict = dict(zip(df_activity_summary['date'], df_activity_summary['elevation']))
+date_to_steps_dict = dict(zip(df_activity_summary['date'], df_activity_summary['steps']))
+# save dict
+with open('date_to_distance_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_to_distance_dict, picklefile)
+with open('date_to_elevation_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_to_elevation_dict, picklefile)
+with open('date_to_steps_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_to_steps_dict, picklefile)
+
+
+# could just use this to try to get running. but about half
+# of days don't have type of actiity. so don't know if should
+# trust it
+df_activity = pd.read_pickle('df_activity.pkl')
+df_run = df_activity[df_activity['activity']=='Run']
+df_run['date'] = pd.to_datetime(df_run['datetime'].dt.date)
+df_run_time = df_run.groupby('date').size().reset_index().rename(columns={0:'minutes'})
+df_run_time = df_run_time[df_run_time['minutes']<200]  # look at outlier on webpage
+df_run_time['minutes'].hist(bins=12, alpha=.75)
+plt.grid(False)
+df_run[df_run['date']=='2018-04-19']
+df_run[df_run['date']=='2018-04-20']
+
+df_activity_summary[df_activity_summary['date']=='2018-04-18']
+df_activity_summary[560:570]
+# this is just wrong. maybe shouldnt trust this running measure. is there another?
+
+# create function to get steps and elevation dicts. presume can sum and 
+# will get same as daily count? but these give when i had stps and elevantino
+# in case need timing of it. could get running here to if taking a lot of steps
+# within a short amount of time. check those wonky dates -- april 19 and 20 -- 
+# in this data here. at least just create a metric that's the number of steps
+# over time or something. to see if total steps is all that matters or if get
+# more bang for the buck if it's done in a shorter time interval. i suppose it's
+# basically getting the number of minutes with at least one step is the second
+# metric here that i can measure and maybe combine.
+
+# get floors instead of elevation. it's the same (elevation is floors * 10)
+# and i have floors data downloaded. don't have elevation.
+
+# steps
+
+date = date_list[0]
+metric = 'floors'
+
+
+def open_metric_dict(date, metric):
+    date = str(date.year) + '-' + date.strftime('%m') + '-' + date.strftime('%d')
+    try:
+        with open(metric+date+'.pkl', 'rb') as picklefile:
+            activity_data_day_dict = pickle.load(picklefile)
+    except:
+        print(date)
+        'no dict on ' + date
+        print()
+        activity_data_day_dict = None
+    return activity_data_day_dict
+
+
+activity_data_day_dict.keys()
+
+date_list = pd.date_range('2016-10-01', '2018-09-25', freq='D')
+date = date_list[100]
+date = date_list[0]
+
+steps_data_day_dict = open_metric_dict(date, 'steps')
+steps_data_day_dict = open_metric_dict(date, 'elevation')
+
+date_list = pd.date_range('2017-07-25', '2017-07-25', freq='D')
+date = dates[100]
+date = date_list[0]
+
+floors_data_day_dict = open_metric_dict(date_list[0], 'floors')
+
+
+steps_data_day_dict.keys()
+steps_data_day_dict['activities-steps']  # give the total number of steps within the day
+steps_data_day_dict['activities-steps-intraday'].values()
+steps_data_day_dict['activities-steps-intraday'].keys()
+steps_data_day_dict['activities-steps-intraday']['dataset'][1050]
+
+# these two just say the dataset is in 1-min increments
+steps_data_day_dict['activities-steps-intraday']['datasetInterval']
+steps_data_day_dict['activities-steps-intraday']['datasetType']
+
+
+steps_data_day_dict.keys()
+
+
+def create_df_for_metric_each_minute(date_list, metric):
+    time_and_metric_dict = {'date':[], 'time':[], metric:[]}
+    for date in date_list:
+        metric_data_day_dict = open_metric_dict(date, metric)
+        if metric_data_day_dict == None:
+            None
+        else:
+            dataset_day = metric_data_day_dict['activities-'+metric+'-intraday']['dataset']
+            for data_dict in dataset_day:
+                time_and_metric_dict['date'].append(date)
+                time_and_metric_dict['time'].append(data_dict['time'])
+                time_and_metric_dict[metric].append(data_dict['value'])
+    df_time_metric = pd.DataFrame(time_and_metric_dict)
+    return df_time_metric  
+ 
+#date_list = date_list[100:105]
+#date_list = pd.date_range('2017-10-01', '2017-10-05', freq='D')
+date_list = pd.date_range('2016-10-01', '2018-09-25', freq='D')
+df_time_steps = create_df_for_metric_each_minute(date_list, 'steps')
+
+df_time_steps.groupby('date')['steps'].sum().hist(bins=15, alpha=.6)
+plt.grid(False)
+
+# active minutes
+df_time_steps.groupby('date')['steps'].apply(lambda x: len(x[x>0])).hist(bins=15, alpha=.6)
+plt.grid(False)
+
+date_to_steps_dict = dict(df_time_steps.groupby('date')['steps'].sum())
+date_to_active_minutes_dict = dict(df_time_steps.groupby('date')['steps'].apply(lambda x: len(x[x>0])))
+
+# save dicts
+with open('date_to_steps_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_to_steps_dict, picklefile)
+with open('date_to_active_minutes_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_to_active_minutes_dict, picklefile)
+
+
+# create some sort of metric that gets at intensity of steps
+# get at overall steps per minute that took at least one step.
+# but come up with something additinal to that, that gets at
+# peak intensity in some way? how? e.g., simple would be to take
+# top 10 minutes with the most steps and avarege those. but is
+# there an even more nuanced way?
+df_time_steps[df_time_steps['steps']>0]['steps'].hist(bins=25, alpha=.7)
+plt.grid(False)
+# this is really cool! bi-modal. assuming this is walking vs. running    
+for date in df_time_steps['date'].unique()[100:105]:
+    df_date_steps = df_time_steps[df_time_steps['date']==date]
+    df_date_steps[df_date_steps['steps']>0]['steps'].hist(bins=10, 
+                 color='red', alpha=.3)
+    plt.grid(False)
+    plt.xlim(0,150)
+    plt.ylim(0,60)
+    plt.show();
+
+# how to calculate how intense my most intense walking-running was that day?
+# i want to weight the intense stuff more, and the most intense, weight tbe most?
+# order minutes by number of steps and get ewm wtih drop-off after 30 min? 15 min?
+# conceptually, it's how intense was the most intense steps on that day.
+df_time_steps = df_time_steps.sort_values(by=['date', 'steps'])
+df_time_steps['steps_intensity'] = df_time_steps.groupby('date')['steps'].transform(lambda x: x.ewm(span=15).mean())  
+df_time_steps[['steps_intensity', 'steps']]
+df_time_steps_intensity = df_time_steps.groupby('date')['steps_intensity'].apply(lambda x: x.tail(1)).reset_index()
+
+df_time_steps_intensity['steps_intensity'].hist(alpha=.7, bins=25)
+plt.grid(False)
+# are these super low dates outliers, bad values, or real?
+
+date_to_steps_intensity_dict = dict(zip(df_time_steps_intensity['date'], df_time_steps_intensity['steps_intensity']))
+
+# save dicts
+with open('date_to_steps_intensity_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_to_steps_intensity_dict, picklefile)
+
+
+
+# elevation
+#date_list = date_list[100:105]
+date_list = pd.date_range('2016-10-01', '2018-09-25', freq='D')
+df_time_floors = create_df_for_metric_each_minute(date_list, 'floors')
+
+df_time_floors.groupby('date')['floors'].sum().hist(bins=50, alpha=.6)
+plt.grid(False)
+
+df_floors_by_date = df_time_floors.groupby('date')['floors'].sum()
+plt.plot(df_floors_by_date)
+df_floors_by_date[70:225]
+
+# all zero floors. try to get again. or get elevation instead?
+# checked again and the api for minute-by-minute activity data is
+# just producing zero steps/elvation for this data rate. so need
+# to use summary data. but wasn't planning to do anything yet
+# related to timing of the steps (though in future maybe could 
+# match this up with hr to get a sense for how strenous going up was?)
+date_list = pd.date_range('2016-12-12', '2017-05-07', freq='D')
+
+df_activity_elevation = df_activity_summary.set_index('date')
+df_activity_elevation['elevation'] = df_activity_elevation['elevation']/10
+plt.plot(df_activity_elevation['elevation'])
+
+# just use this elevation summary for now, for floors
+# rather than summing minute by minute floors data
+df_activity_elevation = df_activity_elevation.reset_index()
+df_activity_elevation.dtypes
+date_to_floors_dict = dict(zip(df_activity_elevation['date'], df_activity_elevation['elevation']))
+
+# save dicts
+with open('date_to_floors_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_to_floors_dict, picklefile)
+
+# same in json file downloaded from website.
+df_activity_elevation[df_activity_elevation['date']=='2017-05-16']
 
 
 
 
+
+
+
+
+
+
+# ------------------------
+# create past lagged vars
+def create_lagged_past_date_variables(number_of_lags, date_variable, df):
+    for lag in list(range(1,number_of_lags+1)):
+        df['date_past_'+str(lag)] = df[date_variable] - timedelta(days=lag)
+    return df
+
+df_hr_mean = create_lagged_past_date_variables(1, 'date_sleep', df_hr_mean)
+df_hr_mean[['date_sleep', 'date_past_1']]
+
+df_hr_mean = create_lagged_past_date_variables(2, 'date_sleep', df_hr_mean)
+df_hr_mean[['date_sleep', 'date_past_1', 'date_past_2']]
+
+df_hr_mean['minutes_sleep_lag_1'] = df_hr_mean['date_past_1'].map(date_to_minutes_alseep_dict)
+df_hr_mean[['min_asleep', 'minutes_sleep_lag_1']]
+
+results = smf.ols(formula = """hr_rest_next_day ~ hr_mean + hr_mean_lag1 + 
+                  hr_rest + I(hr_rest**2) + min_asleep + minutes_sleep_lag_1 + 
+                  temp + month_ts + start_sleep_time + tue + wed + thu + fri + 
+                  sat + sun""",  #  + alcohol + alcohol_lag1 
+                  data=df_hr_mean).fit()
+print(results.summary())
+# the more minutes asleep, the lower resting hr next day
+
+df_hr_mean[['hr_mean', 'min_asleep']].corr()
+sns.lmplot(x='min_asleep', y='hr_mean', data=df_hr_mean[df_hr_mean['min_asleep']<800], 
+           scatter_kws={'alpha':.15}, order=3)
+plt.xlim(250, 700)
+plt.ylim(46, 65)
+
+results = smf.ols(formula = """hr_rest_next_day ~ hr_mean + hr_mean_lag1 + 
+                  hr_rest + I(hr_rest**2) + min_asleep + minutes_sleep_lag_1 + 
+                  temp + month_ts + start_sleep_time + tue + wed + thu + fri + 
+                  sat + sun + hr_mean:min_asleep""",  #  + alcohol + alcohol_lag1 
+                  data=df_hr_mean).fit()
+print(results.summary())
+# no interaction between min asleep and hr while asleep
+
+df_hr_mean['minutes_within_sleep'] = df_hr_mean['date_sleep'].map(date_to_min_within_sleep_dict)
+df_hr_mean['minutes_within_sleep_lag1'] = df_hr_mean['date_past_1'].map(date_to_min_within_sleep_dict)
+df_hr_mean[['minutes_within_sleep', 'minutes_within_sleep_lag1']]
+df_hr_mean['sleep_efficiency'] = df_hr_mean['min_asleep'] / df_hr_mean['minutes_within_sleep'] 
+df_hr_mean['sleep_efficiency'].hist()
+df_hr_mean[df_hr_mean['sleep_efficiency']==1]
+# look up these days. can't be 100% efficient!
+# something is wrong, need to do over.
+# it'd be nice to get the number of sleep interruptions too (vs. time awake during sleep session)
+
+results = smf.ols(formula = """hr_rest_next_day ~ hr_mean + hr_mean_lag1 + 
+                  hr_rest + I(hr_rest**2) + min_asleep + minutes_sleep_lag_1 + 
+                  temp + month_ts + start_sleep_time + tue + wed + thu + fri + 
+                  sat + sun + sleep_efficiency""",  #  + alcohol + alcohol_lag1 
+                  data=df_hr_mean[df_hr_mean['sleep_efficiency']!=1]).fit()
+print(results.summary())
+# sleep_efficiency not adding anything to story
+
+# look at changes in hr instead of this lagged var approach
+df_hr_mean[['sleep_efficiency', 'hr_mean', 'min_asleep']].corr()
+sns.lmplot(x='hr_mean', y='sleep_efficiency', data=df_hr_mean, 
+           scatter_kws={'alpha':.15}, order=2)
+
+# get subjectve ratings for day after sleep
+df_hr_mean.columns
+date_to_energy_dict = dict(zip(df_hr_mean['date_sleep'], df_hr_mean['energy']))
+date_to_fun_dict = dict(zip(df_hr_mean['date_sleep'], df_hr_mean['fun']))
+date_to_subj_sleep_dict = dict(zip(df_hr_mean['date_sleep'], df_hr_mean['subj_sleep']))
+
+df_hr_mean['energy_next_day'] = df_hr_mean['date_forward_1'].map(date_to_energy_dict)
+df_hr_mean['fun_next_day'] = df_hr_mean['date_forward_1'].map(date_to_fun_dict)
+df_hr_mean['subj_sleep_next_day'] = df_hr_mean['date_forward_1'].map(date_to_subj_sleep_dict)
+
+sns.countplot(df_hr_mean['subj_sleep_next_day'])
+
+# should add another lag to min sleep and to hr rest
+df_hr_mean['hr_rest_lag1'] = df_hr_mean['date_past_1'].map(date_to_hr_resting_dict)
+df_hr_mean['minutes_sleep_lag_2'] = df_hr_mean['date_past_2'].map(date_to_minutes_alseep_dict)
+df_hr_mean[['date_sleep', 'min_asleep', 'minutes_sleep_lag_1' ,'minutes_sleep_lag_2']]
+
+results = smf.ols(formula = """energy_next_day ~ hr_mean + hr_mean_lag1 + 
+                  hr_rest + hr_rest_lag1 + min_asleep + minutes_sleep_lag_1 + minutes_sleep_lag_2 +
+                  temp + month_ts + start_sleep_time + tue + wed + thu + fri + 
+                  sat + sun + energy + energy_lag1 + fun + fun_lag1 + 
+                  subj_sleep""",  #  + alcohol + alcohol_lag1 
+                  data=df_hr_mean).fit()
+print(results.summary())
+# more min asleep, less energy. guess this is plausible. and min asleep two
+# nights ago is the opposite. more min two nights ago = more energy!
+
+results = smf.ols(formula = """fun_next_day ~ hr_mean + hr_mean_lag1 + 
+                  hr_rest + hr_rest_lag1 + min_asleep + minutes_sleep_lag_1 + minutes_sleep_lag_2 + 
+                  temp + month_ts + start_sleep_time + tue + wed + thu + fri + 
+                  sat + sun + energy + energy_lag1 + fun + fun_lag1 + 
+                  subj_sleep""",  #  + alcohol + alcohol_lag1 
+                  data=df_hr_mean).fit()
+print(results.summary())
+
+results = smf.ols(formula = """subj_sleep_next_day ~ hr_mean + hr_mean_lag1 + 
+                  hr_rest + hr_rest_lag1 + min_asleep + minutes_sleep_lag_1 + minutes_sleep_lag_2 + 
+                  temp + month_ts + start_sleep_time + tue + wed + thu + fri + 
+                  sat + sun + energy + energy_lag1 + fun + fun_lag1 + 
+                  subj_sleep""",  #  + alcohol + alcohol_lag1 
+                  data=df_hr_mean).fit()
+print(results.summary())
+
+
+df_hr_mean[['energy_next_day', 'fun_next_day', 
+            'subj_sleep_next_day', 'hr_mean',
+            'hr_rest_next_day', 'hr_rest_min_next_day']].corr()
+
+# sleep min X hr?
+results = smf.ols(formula = """hr_rest_min_next_day ~ hr_mean + hr_mean_lag1 + 
+                  hr_rest_min + min_asleep + minutes_sleep_lag_1 + temp + 
+                  month_ts + start_sleep_time + tue + wed + thu + fri + 
+                  sat + sun + energy  + fun + subj_sleep + hr_mean*hr_rest_min""",  #  + alcohol + alcohol_lag1 
+                  data=df_hr_mean).fit()
+print(results.summary())
+
+
+
+# LEFT OFF. WHAT NEXT? SEE IDEAS IN 2/9 NOTEBOOK.
+# GET EXERCISE. THEN MAKE NEW SLEEP AND OTHER METRICS.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ==================================================================
+# tigramite
+# examine causal network of fitness and sleep metrics from fitbit with trigramite
+import tigramite
+from tigramite import data_processing as pp
+from tigramite import plotting as tp
+from tigramite.pcmci import PCMCI
+from tigramite.independence_tests import ParCorr, GPDC, CMIknn, CMIsymb
+from tigramite.models import LinearMediation, Prediction
+
+
+def plot_ts(df_activity_sleep, variable_list, i):
+    plt.figure(figsize=(8,5))
+    plt.plot(df_activity_sleep['date_sleep'], df_activity_sleep[variable_list[i]], 
+             alpha=.6, color='green', linewidth=1.5)
+    plt.xticks(fontsize=14)  # rotation=30
+    plt.yticks(fontsize=14)
+    plt.xlabel('')
+    plt.ylabel(variable_list[i], fontsize=18);
+    plt.title(variable_list[i], fontsize=18)
+    sns.despine()
+    plt.show();
+
+df_hr_mean.columns
+
+df_hr_mean['hr_rest_lag1'] = df_hr_mean['hr_rest'].shift(1)
+df_hr_mean[['hr_rest', 'hr_rest_lag1']]
+
+# with tigramite, this only gets at efx of sleep on next day stuff
+# would have to change the lags to get at day-stuff on sleep efx.
+variable_list = ['hr_mean', 'start_sleep_time', 'min_asleep', 'subj_sleep',
+                 'sleep_efficiency', 'temp', 'energy_lag1', 'fun_lag1', 
+                 'hr_rest_lag1']
+
+df_hr_mean[variable_list].corr()
+df_hr_mean[variable_list+['minutes_sleep_lag_1']].corr()
+
+
+for i in range(1, len(variable_list)):
+    plot_ts(df_hr_mean, variable_list, i)
+
+
+df_for_tigramite = df_hr_mean.copy(deep=True)
+
+# fill nans with mean up to that point in time
+for col in variable_list:
+    print(col)
+    df_for_tigramite[col+'_expanding'] = df_for_tigramite[col].shift(1).expanding(min_periods=4).mean()
+    df_for_tigramite.loc[df_for_tigramite[col].isnull(), col] = df_for_tigramite[col+'_expanding']
+
+# check for missing values now
+for col in variable_list:
+    print(col, len(df_for_tigramite[df_for_tigramite[col].isnull()]))
+
+df_for_tigramite = df_for_tigramite.dropna()
+
+# standardiz/z variables
+for col in variable_list:
+    print(col)
+    df_for_tigramite[col] = (df_for_tigramite[col] - df_for_tigramite[col].mean()) / df_for_tigramite[col].std()
+
+df_for_tigramite[variable_list].mean()
+df_for_tigramite[variable_list].std()
+
+
+data = df_for_tigramite[variable_list].values
+T, N = data.shape
+
+# Initialize dataframe object
+dataframe = pp.DataFrame(data)
+
+# Specify time axis and variable names
+datatime = np.arange(len(data))
+var_names = variable_list
+
+tp.plot_timeseries(data, datatime, var_names)
+
+parcorr = ParCorr(significance='analytic')
+pcmci = PCMCI(
+    dataframe=dataframe, 
+    cond_ind_test=parcorr,
+    var_names=var_names,
+    verbosity=1)
+
+correlations = pcmci.get_lagged_dependencies(tau_max=3)
+lag_func_matrix = tp.plot_lagfuncs(val_matrix=correlations, setup_args={'var_names':var_names, 
+                                    'x_base':5, 'y_base':.5})
+
+# start wtih tau_max=3 for now. look at autocorr plots to think more
+pcmci.verbosity = 1
+results = pcmci.run_pcmci(tau_max=3, pc_alpha=None)
+
+print("p-values")
+print (results['p_matrix'].round(3))
+print("MCI partial correlations")
+print (results['val_matrix'].round(2))
+
+q_matrix = pcmci.get_corrected_pvalues(p_matrix=results['p_matrix'])  # , fdr_method='fdr_bh'
+pcmci._print_significant_links(
+        p_matrix = results['p_matrix'], 
+        q_matrix = results['p_matrix'],  # q_matrix  results['p_matrix']
+        val_matrix = results['val_matrix'],
+        alpha_level = 0.01)
+
+link_matrix = pcmci._return_significant_parents(pq_matrix=results['p_matrix'],  # q_matrix, results['p_matrix']
+                        val_matrix=results['val_matrix'], alpha_level=0.01)['link_matrix']
+
+
+# ==========================================================
+# pickle for jupyter nb viz
+cd /Users/charlesmartens/Google Drive/jobs/data science fellowships/
+
+with open('results_my_fitbit.pkl', 'wb') as picklefile:
+	pickle.dump(results, picklefile)
+#with open('results_my_fitbit.pkl', 'rb') as picklefile:
+#	results_my_fitbit = pickle.load(picklefile)
+
+with open('link_matrix_my_fitbit.pkl', 'wb') as picklefile:
+	pickle.dump(link_matrix, picklefile)
+#with open('link_matrix_my_fitbit.pkl', 'rb') as picklefile:
+#	link_matrix_my_fitbit = pickle.load(picklefile)
+
+with open('var_names_my_fitbit.pkl', 'wb') as picklefile:
+	pickle.dump(var_names, picklefile)
+#with open('var_names_my_fitbit.pkl', 'rb') as picklefile:
+#	var_names_my_fitbit = pickle.load(picklefile)
+# ==========================================================
+
+
+tp.plot_graph(
+    val_matrix=results['val_matrix'],
+    link_matrix=link_matrix,
+    var_names=var_names,
+    link_colorbar_label='cross-MCI',
+    node_colorbar_label='auto-MCI',
+    )
+
+# Plot time series graph
+tp.plot_time_series_graph(
+    val_matrix=results['val_matrix'],
+    link_matrix=link_matrix,
+    var_names=var_names,
+    link_colorbar_label='MCI',
+    )
+
+# ==================================================================
+
+
+# think more about predicting resting hr and energy based on prior 
+# levels. i don't want to penelaze days where the prior day's metric
+# was already good and so there's little room for movement to get 
+# even better. maybe if i diff the dv and control for prior level?
+# or do that pct rank of where on distribution from the regression at
+# that particular level the value of the dv falls. not explaining it 
+# well here.
+
+# can/should get hr at diff times in sleep cycle and early vs late in night
+# to distinguish/predict metrics next day. can think about getting low/min
+# hr while asleep score each night. can look at fluctuations in hr (std 
+# or something similar) or mean x std interaction.
+
+# compute cumulative variables, i.e., weighted avg of past x days of sleep minutes and sleep hr?
+# diff the ts to examine that way. to de-trend or stationarize the ts
+
+# try differencing approach or logged differencing
+df_hr_mean.shape
+df_hr_mean[['hr_rest_next_day', 'hr_rest']]
+
+def create_log_diff_measure(df_hr_mean, variable_first, variable_second):
+    df_hr_mean[variable_first+'_diff'] = df_hr_mean[variable_second] - df_hr_mean[variable_first] 
+    df_hr_mean[variable_first+'_log_diff'] = np.log(df_hr_mean[variable_second]) - np.log(df_hr_mean[variable_first])
+    df_hr_mean[variable_first+'_diff'].hist(alpha=.6, bins=15)
+    plt.show();    
+    df_hr_mean[variable_first+'_log_diff'].hist(alpha=.6, bins=15)
+    plt.show();    
+    return df_hr_mean
+
+df_hr_mean = create_log_diff_measure(df_hr_mean, 'hr_rest', 'hr_rest_next_day')
+df_hr_mean.columns
+
+variable = 'hr_rest_diff'  # 'hr_rest_next_day' 'hr_rest_diff' 'hr_rest_log_diff' 
+plt.plot(df_hr_mean['date_sleep'], df_hr_mean[variable])
+plt.xticks(rotation=30)
+
+df_hr_mean = create_log_diff_measure(df_hr_mean, 'hr_mean_lag1', 'hr_mean')
+variable = 'hr_mean_lag1_log_diff'  # 'hr_mean_lag1_log_diff' 'hr_mean_lag1_diff'  'hr_mean_lag1'
+plt.plot(df_hr_mean['date_sleep'], df_hr_mean[variable])
+plt.xticks(rotation=30)
+
+df_hr_mean = create_log_diff_measure(df_hr_mean, 'minutes_sleep_lag_1', 'min_asleep')
+variable = 'minutes_sleep_lag_1_log_diff'  # 'hr_mean_lag1_log_diff' 'hr_mean_lag1_diff'  'hr_mean_lag1'
+plt.plot(df_hr_mean['date_sleep'], df_hr_mean[variable])
+plt.xticks(rotation=30)
+
+df_hr_mean = create_log_diff_measure(df_hr_mean, 'fun', 'fun_next_day')
+variable = 'fun_log_diff'  # 'hr_mean_lag1_log_diff' 'hr_mean_lag1_diff'  'hr_mean_lag1'
+plt.plot(df_hr_mean['date_sleep'], df_hr_mean[variable])
+plt.xticks(rotation=30)
+
+
+results = smf.ols(formula = """hr_rest_next_day ~ hr_mean + hr_mean_lag1 + 
+                  hr_rest + min_asleep + minutes_sleep_lag_1 + temp + 
+                  month_ts + start_sleep_time + tue + wed + thu + fri + 
+                  sat + sun""",  #  + alcohol + alcohol_lag1 + sleep_efficiency
+                  data=df_hr_mean).fit()
+print(results.summary())
+
+results = smf.ols(formula = """hr_rest_log_diff ~ hr_mean_lag1_log_diff + 
+                  minutes_sleep_lag_1_log_diff + hr_rest + I(hr_rest**2) + temp + 
+                  tue + wed + thu + fri + sat + sun + hr_mean_lag1 + minutes_sleep_lag_1 
+                  """,  #  + alcohol + alcohol_lag1 + sleep_efficiency
+                  data=df_hr_mean).fit()
+print(results.summary())
+# + hr_mean_lag1:hr_mean_lag1_log_diff + minutes_sleep_lag_1:minutes_sleep_lag_1_log_diff
+
+sns.lmplot(x='hr_mean_lag1_log_diff', y='hr_rest_diff', data=df_hr_mean, x_bins=5)
+sns.lmplot(x='minutes_sleep_lag_1_log_diff', y='hr_rest_diff', data=df_hr_mean, x_bins=5)
+
+
+results = smf.ols(formula = """fun_log_diff ~ hr_mean_lag1_log_diff + 
+                  minutes_sleep_lag_1_log_diff + hr_rest + I(hr_rest**2) + temp + 
+                  tue + wed + thu + fri + sat + sun + hr_mean_lag1 + 
+                  minutes_sleep_lag_1 + fun + I(fun**2) + I(fun**3)
+                  + hr_mean_lag1_log_diff:hr_mean 
+                  + minutes_sleep_lag_1_log_diff:min_asleep""",  #  + alcohol + alcohol_lag1 + sleep_efficiency
+                  data=df_hr_mean).fit()
+print(results.summary())
+
+
+
+# ---------------
+# explore statsmodels ts package
+
+
+
+
+
+# ---------------
 # explore alcohol with other sleep metrics:
 # time, wakings, std, ? (freq band of sleep cycles? - wait)
 # row = night's sleep
@@ -2364,7 +3756,6 @@ results.pvalues.subj_sleep
 # does hr at night predict stuff the next day better than anything else?
 
 # hr two nights out -- maybe two nights ahead and two nights before alcohol
-
 
 
 
