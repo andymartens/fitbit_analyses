@@ -4,6 +4,11 @@ Created on Sat Dec 24 16:23:34 2016
 
 @author: charlesmartens
 
+to do
+data/work w coltrane and good music
+
+
+
 Anaylyses: 
 Develop resting HR metrics to help validate HR while asleep as measure of sleep 
 quality, as well as other measures of sleep quality. Examine other outcomes next 
@@ -14,6 +19,10 @@ using hr while asleep and other sleep quality possibilities. Behavioral measures
 I have my daily ratings. That's great. Anything else? What about activity data? 
 Amount of physical activity could be interesting, as results of sleep quality. 
 How fast my HR descreases from activity to rest while waking? Anything else?
+
+I calculated many varaibles and saved them to date-to-metric dicts in order
+to map them onto an analytic file. check for dicts below. e.g., dicts with
+hr-highest-activity each day and hr prior to falling asleep eah day.
 
 """
 
@@ -254,6 +263,10 @@ df_sleep.tail()
 df_sleep.to_pickle('df_sleep.pkl')
 df_sleep[['date_time']].to_pickle('df_sleep_skeleton.pkl')
 
+
+df_sleep_test = pd.read_pickle('df_sleep.pkl')
+
+
 # descriptives
 # loop though -- by day, how many hours alseep for?
 
@@ -381,6 +394,251 @@ plt.yticks(fontsize=10)
 sns.despine()
 
 
+# =============================================================================
+# 1 DONE
+# for hr intesnsity-max from exercise, etc., have entire hr ts. 
+# resample by minute. create smoothed hr to clean. clean. then 
+# create smoothed hr again using cleaned hr. Now take just times 
+# when awake. Then sort within day and take ewms to get sense 
+# of hr intensity. 
+
+# 2 DONE
+# also get hr just before sleep. calculate a time window, e.g., 8pm to 2am
+# then see where fall asleep in this zone. then get hr before. i like 
+# getting just the min for about 2-5 minutes because it's something i can 
+# strive for. and can get slope. what else can i shoot for? or examine?
+
+# 1
+# take entire hr. 
+df_hr.head(10)
+df_hr.shape  # (944712, 5)
+len(df_hr[df_hr['hr'].isnull()])  # 0
+
+# take sleep times and create dict
+df_sleep_dates['sleep'] = 1
+df_sleep_dates.head()
+date_time_to_sleep_dict = dict(zip(df_sleep_dates['date_time'], df_sleep_dates['sleep']))
+
+# map sleep times into entire hr df
+df_hr['sleep'] = df_hr['date_time'].map(date_time_to_sleep_dict)
+df_hr['sleep'].replace(np.nan, 0, inplace=True)
+df_hr['sleep'].value_counts(normalize=True)
+df_hr['sleep'].value_counts()
+#0.0    599287
+#1.0    345425
+
+# is this resampled already? don't think so.
+df_hr_resample = df_hr.resample('1min', on='date_time').mean().reset_index()
+df_hr_resample.shape  # (1044000, 3)
+len(df_hr_resample[df_hr_resample['hr'].isnull()])  # 99288
+len(df_hr_resample[df_hr_resample['sleep'].isnull()])  # 99288
+df_hr_resample['sleep'].value_counts(normalize=True)
+df_hr_resample['sleep'].value_counts()
+#0.0    599287
+#1.0    345425
+
+# clean
+df_hr_resample['hr_rolling_30_min'] = df_hr_resample['hr'].rolling(window=30, min_periods=20, center=True).mean()
+df_hr_resample['hr_vs_smoothed_diff'] = df_hr_resample['hr'] - df_hr_resample['hr_rolling_30_min']
+
+df_hr_resample['hr_vs_smoothed_diff'].hist(alpha=.5, bins=50)
+plt.grid(False)
+
+df_hr_resample[df_hr_resample['hr_vs_smoothed_diff']>0]['hr_vs_smoothed_diff'].hist(alpha=.5, bins=50)
+pos_diff_mean = df_hr_resample[df_hr_resample['hr_vs_smoothed_diff']>0]['hr_vs_smoothed_diff'].mean() 
+pos_diff_sd = df_hr_resample[df_hr_resample['hr_vs_smoothed_diff']>0]['hr_vs_smoothed_diff'].std()
+x_sd_above_mean = pos_diff_mean + pos_diff_sd*3
+
+df_hr_resample[df_hr_resample['hr_vs_smoothed_diff']<0]['hr_vs_smoothed_diff'].hist(alpha=.5, bins=50)
+neg_diff_mean = df_hr_resample[df_hr_resample['hr_vs_smoothed_diff']<0]['hr_vs_smoothed_diff'].mean() 
+neg_diff_sd = df_hr_resample[df_hr_resample['hr_vs_smoothed_diff']<0]['hr_vs_smoothed_diff'].std()
+x_sd_below_mean = neg_diff_mean - neg_diff_sd*3
+
+# replace outliers with smoothed value
+df_hr_resample['outlier_hr'] = 0
+df_hr_resample.loc[(df_hr_resample['hr_vs_smoothed_diff'] > x_sd_above_mean) |
+        (df_hr_resample['hr_vs_smoothed_diff'] < x_sd_below_mean), 
+        'outlier_hr'] = 1  
+df_hr_resample['outlier_hr'].value_counts(normalize=True)  # 2.2%
+
+df_hr_resample['hr_clean'] = df_hr_resample['hr']
+df_hr_resample.loc[df_hr_resample['outlier_hr']==1, 'hr_clean'] = df_hr_resample['hr_rolling_30_min']
+df_hr_resample[['hr', 'hr_clean']].corr()
+
+# now create rolling mean again but w cleaned data
+df_hr_resample['hr_clean_rolling_30_min'] = df_hr_resample['hr_clean'].rolling(window=30, min_periods=20, center=True).mean()
+
+len(df_hr_resample[df_hr_resample['hr_clean'].isnull()])
+len(df_hr_resample[df_hr_resample['hr_clean_rolling_30_min'].isnull()])
+
+#df_hr_resample['hr_interpolate_clean'] = df_hr_resample['hr_clean_rolling_30_min'].interpolate(limit=1)
+#len(df_hr_resample[df_hr_resample['hr_interpolate_clean'].isnull()])
+
+df_hr_resample[(df_hr_resample['hr_clean'].isnull()) & 
+                (df_hr_resample['hr_clean_rolling_30_min'].notnull())]
+
+df_hr_resample.columns
+df_hr_resample[['date_time', 'hr', 'hr_clean', 'hr_clean_rolling_30_min']][210:240]
+
+# where are lots of hr clean nans in a row
+df_hr_resample[['date_time', 'hr', 'hr_clean', 'hr_clean_rolling_30_min']][df_hr_resample['hr_clean'].isnull()]
+df_hr_resample[['date_time', 'hr', 'hr_clean', 
+                'hr_clean_rolling_30_min', 'hr_interpolate_clean']][245:275]
+
+plt.plot(df_hr_resample['hr_clean_rolling_30_min'], alpha=.25)
+plt.plot(df_hr_resample['hr_clean'], alpha=.25)
+plt.plot(df_hr_resample['hr'], alpha=.25)
+
+df_hr_resample.head()
+df_hr_resample.tail()
+df_hr_resample.dtypes
+
+df_hr_resample['date'] = pd.to_datetime(df_hr_resample['date_time'].dt.date)
+df_hr_resample = df_hr_resample.sort_values(by=['date', 'hr_clean_rolling_30_min'])
+
+# ultimately, is this correct? can do for a couple dates separately to check
+df_hr_highest_levels_60_min = df_hr_resample.groupby('date')['hr_clean_rolling_30_min'].apply(lambda x: np.max(x.ewm(span=60, min_periods=60).mean()))
+df_hr_highest_levels_30_min = df_hr_resample.groupby('date')['hr_clean_rolling_30_min'].apply(lambda x: np.max(x.ewm(span=30, min_periods=30).mean()))
+
+# confirms that computed correctly
+#df_hr_resample['hr_ewma_highest'] = df_hr_resample.groupby('date')['hr_clean_rolling_30_min'].transform(lambda x: x.ewm(span=30, min_periods=30).mean())
+#df_test = df_hr_resample.groupby('date')['hr_ewma_highest'].apply(lambda x: np.max(x)).reset_index()
+#df_test = df_hr_resample.groupby('date')['hr_ewma_highest'].apply(lambda x: x.tail(1)).reset_index()
+
+df_hr_highest_levels_30_min.hist(bins=15, color='dodgerblue', alpha=.5)
+plt.grid(False)
+plt.axvline(np.mean(df_hr_highest_levels_30_min[df_hr_highest_levels.notnull()]), linestyle='--', color='grey', alpha=.5)
+plt.axvline(np.median(df_hr_highest_levels_30_min[df_hr_highest_levels.notnull()]), linestyle='--', color='grey', alpha=.5)
+
+date_to_hr_highest_levels_30_min_dict = dict(df_hr_highest_levels_30_min)
+date_to_hr_highest_levels_60_min_dict = dict(df_hr_highest_levels_60_min)
+
+# save dict
+with open('date_to_hr_highest_levels_30_min_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_to_hr_highest_levels_30_min_dict, picklefile)
+with open('date_to_hr_highest_levels_60_min_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_to_hr_highest_levels_60_min_dict, picklefile)
+
+
+# now get hr just before sleep
+df_hr_resample.head()
+df_hr_resample = df_hr_resample.sort_values(by='date_time')
+
+# get first sleep flag after 8pm
+# do i want to get the hr clean for the x min beforehand
+# which would be a ragged ts rolling mean, essentially?
+
+# get ragged rolling mean for x minutes and then can take that 
+# value at first sleep after 8pm
+# oh, actually, don't need to get ragged rolling because 
+# i resampled and so i have each minute. but i do need to
+# make sure this rolling mean is getting at just hr prior 
+# x min (i.e., not centered)
+df_hr_resample['hr_clean_rolling_120_min'] = df_hr_resample['hr_clean'].rolling(window=120, min_periods=40).mean()
+df_hr_resample['hr_clean_rolling_60_min'] = df_hr_resample['hr_clean'].rolling(window=60, min_periods=20).mean()
+df_hr_resample['hr_clean_rolling_30_min'] = df_hr_resample['hr_clean'].rolling(window=30, min_periods=10).mean()
+
+df_hr_resample[['hr_clean_rolling_30_min', 'hr_clean_rolling_60_min']][:40]
+
+# how to get the flag for first sleep point. just grab between 8pm and 3am
+# and then take only the sleep part and then take the head(1)
+# or maybe i can count minutes back from that first flag. how?
+
+# i just need to lag/shift by 10 min and then do rolling mean
+
+df_hr_resample['hr_rolling_120_min_lag_10_min'] = df_hr_resample['hr_clean_rolling_120_min'].shift(10)
+df_hr_resample['hr_rolling_60_min_lag_10_min'] = df_hr_resample['hr_clean_rolling_60_min'].shift(10)
+df_hr_resample['hr_rolling_30_min_lag_10_min'] = df_hr_resample['hr_clean_rolling_30_min'].shift(10)
+
+# don't wan to count these slep onsets that occur noonish? just between 8 and 3am?
+# guess i should really get time of sleep sessions from elsewhere and then 
+# see which ones map onto my desired timeframe
+dates = pd.date_range('2016-10-01', '2018-09-25', freq='D')
+# run all functions at start of file to run:
+sleep_type_events_timeline_all, start_end_sleep_timeline_all, date_to_classic_or_stages_dict, date_to_sleeps_dict, date_to_minutes_asleep_dict = return_dicts_w_sleep_info_for_list_of_dates(dates)
+start_end_sleep_timeline_all
+
+# create datetime to start-sleep flag but rounded to minute so can map onto df that's resampled by minute
+df_start_end_times = pd.DataFrame(start_end_sleep_timeline_all).rename(columns={0:'start', 1:'end'})
+df_start_end_times['start'] = pd.to_datetime(df_start_end_times['start'])
+df_start_end_times.dtypes
+df_start_end_times['flag'] = 1
+df_start_sleep = df_start_end_times.resample('1min', on='start').mean()
+df_start_sleep['flag'].value_counts()
+df_start_sleep = df_start_sleep[df_start_sleep['flag']==1]
+df_start_sleep.tail(15)  # looks good
+df_start_sleep.reset_index(inplace=True)
+date_time_to_sleep_start_dict = dict(zip(df_start_sleep['start'], df_start_sleep['flag']))
+
+df_hr_resample['start_sleep'] = df_hr_resample['date_time'].map(date_time_to_sleep_start_dict)
+# ok, i have my start sleep times now
+df_hr_resample['start_sleep'].value_counts()
+
+df_hr_resample[['hr_clean_rolling_120_min', 'hr_rolling_120_min_lag_10_min']]
+df_hr_resample_sleep = df_hr_resample[df_hr_resample['start_sleep']==1]
+df_hr_resample_sleep.shape
+# need first sleep between 8pm and 3am or something. how to get? 
+# guess i need 'date-sleep' variable
+df_hr_resample_sleep['hour'] = df_hr_resample_sleep['date_time'].dt.hour
+df_hr_resample_sleep = df_hr_resample_sleep[(df_hr_resample_sleep['hour']>19) | 
+                                            (df_hr_resample_sleep['hour']<4) ]
+
+sns.countplot(df_hr_resample_sleep['date_time'].dt.hour, color='red', alpha=.5)
+
+# create new date variable -- it's lagged 360 min, i.e., 6 hours, i.e., starting 6pm instead of midnight
+# df_hr_resample_sleep['date_sleep'] = df_hr_resample_sleep['date'].shift(-360)
+# now if group by this lagged date, it'll give all the sleep from night before
+# as long as started sleeping after 6pm the night before
+
+df_hr_resample_sleep['date_sleep'] = df_hr_resample_sleep['date_time'] - timedelta(hours=12)
+df_hr_resample_sleep['date_sleep'] = pd.to_datetime(df_hr_resample_sleep['date_sleep'].dt.date)
+df_hr_resample_sleep.head()
+
+df_hr_resample_sleep[['date_sleep', 'date_time']]
+
+len(df_hr_resample_sleep['date_sleep'].unique())
+len(df_hr_resample_sleep['date_time'].dt.date.unique())
+# why would there be 100 fewer. ah because if just take the date
+# of date_time, two diff nigt's sleep can look like one beause
+# technically they start on the same day
+
+sns.countplot(df_hr_resample_sleep.groupby('date_sleep')['start_sleep'].sum(), color='b', alpha=.5)
+
+# just take th first one each day
+df_hr_prior_to_sleep = df_hr_resample_sleep.groupby('date_sleep').head(1)
+
+df_hr_prior_to_sleep[['date_time', 'hr_clean_rolling_30_min', 'hr_clean_rolling_60_min']]
+df_hr_prior_to_sleep[['date_time', 'hr_rolling_30_min_lag_10_min', 'hr_rolling_60_min_lag_10_min']]
+
+len(df_hr_prior_to_sleep[df_hr_prior_to_sleep['hr_clean_rolling_60_min'].isnull()])
+len(df_hr_prior_to_sleep[df_hr_prior_to_sleep['hr_rolling_60_min_lag_10_min'].isnull()])
+
+len(df_hr_prior_to_sleep[df_hr_prior_to_sleep['hr_clean_rolling_30_min'].isnull()])
+len(df_hr_prior_to_sleep[df_hr_prior_to_sleep['hr_rolling_30_min_lag_10_min'].isnull()])
+
+len(df_hr_prior_to_sleep[df_hr_prior_to_sleep['hr_clean_rolling_120_min'].isnull()])
+len(df_hr_prior_to_sleep[df_hr_prior_to_sleep['hr_rolling_120_min_lag_10_min'].isnull()])
+
+# not sure why still 20-30 nulls? but maybe that's reasonably for 700 days
+df_hr_prior_to_sleep[['date_sleep', 'date_time', 'hr_clean_rolling_30_min']][df_hr_prior_to_sleep['hr_clean_rolling_30_min'].isnull()]
+
+date_sleep_to_hr_30_min_before_sleep_lag_10_dict = dict(zip(df_hr_prior_to_sleep['date_sleep'],
+                                                            df_hr_prior_to_sleep['hr_rolling_30_min_lag_10_min']))
+date_sleep_to_hr_60_min_before_sleep_lag_10_dict = dict(zip(df_hr_prior_to_sleep['date_sleep'],
+                                                            df_hr_prior_to_sleep['hr_rolling_60_min_lag_10_min']))
+date_sleep_to_hr_120_min_before_sleep_lag_10_dict = dict(zip(df_hr_prior_to_sleep['date_sleep'],
+                                                            df_hr_prior_to_sleep['hr_rolling_120_min_lag_10_min']))
+
+# save dict
+with open('date_sleep_to_hr_30_min_before_sleep_lag_10_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_sleep_to_hr_30_min_before_sleep_lag_10_dict, picklefile)
+with open('date_sleep_to_hr_30_min_before_sleep_lag_10_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_sleep_to_hr_30_min_before_sleep_lag_10_dict, picklefile)
+with open('date_sleep_to_hr_30_min_before_sleep_lag_10_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_sleep_to_hr_30_min_before_sleep_lag_10_dict, picklefile)
+
+# =============================================================================
+
 
 # ------------------------------
 # sleep focus and hr while sleep
@@ -498,8 +756,6 @@ plt.xlim('2018-09-24 07:00:30', '2018-09-24 07:30:30')
 sns.relplot(x='date_time', y='hr', data=df_date[(df_date['date_time']>'2018-09-24 07:01:30') & (df_date['date_time']<'2018-09-24 07:20:30')], kind='line')
 sns.relplot(x='date_time', y='hr', data=df_date[(df_date['date_time']>'2018-09-24 07:01:30') & (df_date['date_time']<'2018-09-24 07:20:30')])
 plt.xlim('2018-09-24 07:00:30', '2018-09-24 07:30:30')
-
-
 
 
 # -----------------------
@@ -1319,8 +1575,6 @@ plt.ylim(52,68)
 
 # wow - now hr looks pretty much completely unrelated to time of day. what i wanted.
 
-# LEFT OFF - 11/24
-
 # what should do - get either the min sedentary moving avg each hour or the mean 
 # sedentary moving avg each hour. then get mean for each day. why? not sure i have
 # a good rationale yet? but still think i should do. and can always compare to 
@@ -1503,6 +1757,20 @@ df_activity_summary['distance'].hist(bins=50)
 df_activity_summary.to_pickle('df_activity_summary.pkl')
 # use this to get activity data into analytic file
 df_activity.to_pickle('df_activity.pkl')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

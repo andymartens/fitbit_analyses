@@ -334,7 +334,7 @@ df_sleep_dates = pd.read_pickle('df_sleep_skeleton.pkl')
 sleep_datetime_list = df_sleep_dates['date_time'].values
 len(sleep_datetime_list)
 
-df_hr_awake = df_hr[-df_hr['date_time'].isin(sleep_datetime_list)]
+df_hr_awake = df_hr[r-df_hr['date_time'].isin(sleep_datetime_list)]
 df_hr_sleep = df_hr[df_hr['date_time'].isin(sleep_datetime_list)]
 
 df_hr_awake.shape  # (599287, 4)
@@ -3036,32 +3036,32 @@ def open_metric_dict(date, metric):
 
 activity_data_day_dict.keys()
 
-date_list = pd.date_range('2016-10-01', '2018-09-25', freq='D')
-date = date_list[100]
-date = date_list[0]
-
-steps_data_day_dict = open_metric_dict(date, 'steps')
-steps_data_day_dict = open_metric_dict(date, 'elevation')
-
-date_list = pd.date_range('2017-07-25', '2017-07-25', freq='D')
-date = dates[100]
-date = date_list[0]
-
-floors_data_day_dict = open_metric_dict(date_list[0], 'floors')
-
-
-steps_data_day_dict.keys()
-steps_data_day_dict['activities-steps']  # give the total number of steps within the day
-steps_data_day_dict['activities-steps-intraday'].values()
-steps_data_day_dict['activities-steps-intraday'].keys()
-steps_data_day_dict['activities-steps-intraday']['dataset'][1050]
-
-# these two just say the dataset is in 1-min increments
-steps_data_day_dict['activities-steps-intraday']['datasetInterval']
-steps_data_day_dict['activities-steps-intraday']['datasetType']
-
-
-steps_data_day_dict.keys()
+#date_list = pd.date_range('2016-10-01', '2018-09-25', freq='D')
+#date = date_list[100]
+#date = date_list[0]
+#
+#steps_data_day_dict = open_metric_dict(date, 'steps')
+#steps_data_day_dict = open_metric_dict(date, 'elevation')
+#
+#date_list = pd.date_range('2017-07-25', '2017-07-25', freq='D')
+#date = dates[100]
+#date = date_list[0]
+#
+#floors_data_day_dict = open_metric_dict(date_list[0], 'floors')
+#
+#
+#steps_data_day_dict.keys()
+#steps_data_day_dict['activities-steps']  # give the total number of steps within the day
+#steps_data_day_dict['activities-steps-intraday'].values()
+#steps_data_day_dict['activities-steps-intraday'].keys()
+#steps_data_day_dict['activities-steps-intraday']['dataset'][1050]
+#
+## these two just say the dataset is in 1-min increments
+#steps_data_day_dict['activities-steps-intraday']['datasetInterval']
+#steps_data_day_dict['activities-steps-intraday']['datasetType']
+#
+#
+#steps_data_day_dict.keys()
 
 
 def create_df_for_metric_each_minute(date_list, metric):
@@ -3103,7 +3103,7 @@ with open('date_to_active_minutes_dict.pkl', 'wb') as picklefile:
 
 # create some sort of metric that gets at intensity of steps
 # get at overall steps per minute that took at least one step.
-# but come up with something additinal to that, that gets at
+# but come up with something additional to that, that gets at
 # peak intensity in some way? how? e.g., simple would be to take
 # top 10 minutes with the most steps and avarege those. but is
 # there an even more nuanced way?
@@ -3124,21 +3124,36 @@ for date in df_time_steps['date'].unique()[100:105]:
 # order minutes by number of steps and get ewm wtih drop-off after 30 min? 15 min?
 # conceptually, it's how intense was the most intense steps on that day.
 df_time_steps = df_time_steps.sort_values(by=['date', 'steps'])
-df_time_steps['steps_intensity'] = df_time_steps.groupby('date')['steps'].transform(lambda x: x.ewm(span=15).mean())  
-df_time_steps[['steps_intensity', 'steps']]
-df_time_steps_intensity = df_time_steps.groupby('date')['steps_intensity'].apply(lambda x: x.tail(1)).reset_index()
 
-df_time_steps_intensity['steps_intensity'].hist(alpha=.7, bins=25)
+# create several intensity metrics -- with diff spands of time before starts weighting less
+df_time_steps['steps_intensity_15_min'] = df_time_steps.groupby('date')['steps'].transform(lambda x: x.ewm(span=15).mean())  
+df_time_steps['steps_intensity_30_min'] = df_time_steps.groupby('date')['steps'].transform(lambda x: x.ewm(span=30).mean())  
+df_time_steps['steps_intensity_60_min'] = df_time_steps.groupby('date')['steps'].transform(lambda x: x.ewm(span=60).mean())  
+
+df_time_steps[['steps_intensity_15_min', 'steps']]
+df_time_steps[['steps_intensity_15_min', 'steps_intensity_60_min']]
+
+df_time_steps_intensity_15_min = df_time_steps.groupby('date')['steps_intensity_15_min'].apply(lambda x: x.tail(1)).reset_index()
+df_time_steps_intensity_30_min = df_time_steps.groupby('date')['steps_intensity_30_min'].apply(lambda x: x.tail(1)).reset_index()
+df_time_steps_intensity_60_min = df_time_steps.groupby('date')['steps_intensity_60_min'].apply(lambda x: x.tail(1)).reset_index()
+
+df_time_steps_intensity_15_min['steps_intensity_15_min'].hist(alpha=.7, bins=25)
 plt.grid(False)
 # are these super low dates outliers, bad values, or real?
+df_time_steps_intensity_60_min['steps_intensity_60_min'].hist(alpha=.7, bins=25)
+plt.grid(False)
 
-date_to_steps_intensity_dict = dict(zip(df_time_steps_intensity['date'], df_time_steps_intensity['steps_intensity']))
+date_to_steps_intensity_15_min_dict = dict(zip(df_time_steps_intensity_15_min['date'], df_time_steps_intensity_15_min['steps_intensity_15_min']))
+date_to_steps_intensity_30_min_dict = dict(zip(df_time_steps_intensity_30_min['date'], df_time_steps_intensity_30_min['steps_intensity_30_min']))
+date_to_steps_intensity_60_min_dict = dict(zip(df_time_steps_intensity_60_min['date'], df_time_steps_intensity_60_min['steps_intensity_60_min']))
 
 # save dicts
-with open('date_to_steps_intensity_dict.pkl', 'wb') as picklefile:
-	pickle.dump(date_to_steps_intensity_dict, picklefile)
-
-
+with open('date_to_steps_intensity_15_min_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_to_steps_intensity_15_min_dict, picklefile)
+with open('date_to_steps_intensity_30_min_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_to_steps_intensity_30_min_dict, picklefile)
+with open('date_to_steps_intensity_60_min_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_to_steps_intensity_60_min_dict, picklefile)
 
 # elevation
 #date_list = date_list[100:105]
