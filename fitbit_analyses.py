@@ -31,6 +31,7 @@ import pickle
 from datetime import datetime, timedelta
 from pandas.plotting import autocorrelation_plot
 from statsmodels.graphics.tsaplots import plot_pacf
+from scipy.stats import pearsonr
 #import csv
 i#mport sys, os
 #from collections import deque
@@ -57,7 +58,7 @@ df_hr_mean.rename(columns={'hr_mean':'sleeping_hr'}, inplace=True)
 len(df_hr_mean.resample('1D', on='date_sleep').reset_index())  # 509
 df_hr_mean = df_hr_mean.resample('1D', on='date_sleep').mean().reset_index()
 
-len(df_hr_mean[df_hr_mean['hr_mean'].isnull()]) / len(df_hr_mean)
+len(df_hr_mean[df_hr_mean['sleeping_hr'].isnull()]) / len(df_hr_mean)
 
 def create_lagged_past_date_variables(number_of_lags, date_variable, df):
     for lag in list(range(1,number_of_lags+1)):
@@ -371,7 +372,7 @@ df_hr_mean['day_name'] = df_hr_mean['day_of_week'].replace([0,1,2,3,4,5,6],
           ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'])
 df_hr_mean = pd.concat([df_hr_mean, pd.get_dummies(df_hr_mean['day_name'])], axis=1)
 
-sns.barplot(x='day_name', y='hr_mean', data=df_hr_mean, 
+sns.barplot(x='day_name', y='sleeping_hr', data=df_hr_mean, 
             color='dodgerblue', alpha=.6, errcolor='grey', 
             order=['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'])
 plt.ylim(40,60)
@@ -389,12 +390,12 @@ month_to_temp_dict = {1:39, 2:42, 3:50, 4:62, 5:72, 6:80,
                       7:85, 8:84, 9:76, 10:65, 11:54, 12:44}
 df_hr_mean['temp'] = df_hr_mean['month'].map(month_to_temp_dict)
 
-sns.barplot(x='month', y='hr_mean', data=df_hr_mean, 
+sns.barplot(x='month', y='sleeping_hr', data=df_hr_mean, 
             color='dodgerblue', alpha=.6, errcolor='grey')
 plt.ylim(40,60)
 
-sns.relplot(x='temp', y='hr_mean', data=df_hr_mean, kind='line')
-sns.lmplot(x='temp', y='hr_mean', data=df_hr_mean, 
+sns.relplot(x='temp', y='sleeping_hr', data=df_hr_mean, kind='line')
+sns.lmplot(x='temp', y='sleeping_hr', data=df_hr_mean, 
            scatter_kws={'alpha':.15}, order=2)  
 # probably order=2 is more reasonable  
 # interesting that it's the sorta cold months that have highest hr
@@ -411,7 +412,7 @@ year_month_to_month_ordered_dict = dict(zip(df_month_ordered['year_month'], df_m
 df_hr_mean['year_month'] = df_hr_mean['year'].astype(str)+' '+df_hr_mean['month'].astype(str)
 df_hr_mean['month_ts'] = df_hr_mean['year_month'].map(year_month_to_month_ordered_dict)
 
-sns.lmplot(x='month_ts', y='hr_mean', data=df_hr_mean, scatter_kws={'alpha':.15})
+sns.lmplot(x='month_ts', y='sleeping_hr', data=df_hr_mean, scatter_kws={'alpha':.15})
 
 results = smf.ols(formula = """hr_mean ~ month_ts""", data=df_hr_mean).fit()
 print(results.summary())  # ns
@@ -502,7 +503,8 @@ results = smf.ols(formula = """resting_hr ~ sleeping_hr + resting_hr_lag1 +
                   sleeping_hr_lag1 + temp + month_ts + start_sleep_time +
                   weekend + alcohol_lag1 + hr_before_sleep_30_lag1 + 
                   steps_lag1 + elevation_lag1 + active_lag1 + 
-                  steps_intensity_60_lag1""", 
+                  steps_intensity_60_lag1 + elevation_lag2 + 
+                  active_lag2 + steps_intensity_60_lag2""", 
                   data=df_hr_mean).fit()
 print(results.summary())
 
@@ -518,10 +520,99 @@ df_hr_mean[['resting_hr', 'sleeping_hr', 'steps_lag1',
 
 df_hr_mean[['resting_hr', 'sleeping_hr', 'steps_lag2',
             'elevation_lag2', 'steps_intensity_60_lag2']].corr()
-# wow, activity totally reverses direction of relatinship at lag2
+# wow, activity totally reverses direction of relationship at lag2
 
 df_hr_mean[['resting_hr', 'sleeping_hr', 'steps_lag3',
             'elevation_lag3', 'steps_intensity_60_lag3']].corr()
+
+
+# corr matrix to see vars most cor w resting hr 
+def plot_corr_matrix_heatmap(df, var_list, var_list_labels):
+    cmap_enter = sns.diverging_palette(15, 125, sep=10, s=70, l=50, as_cmap=True)
+    mask = np.zeros_like(df[var_list].corr())
+    mask[np.triu_indices_from(mask)] = True
+    with sns.axes_style("white"):
+        ax = sns.heatmap(df[var_list].corr(), mask=mask, center=0, 
+                         square=True, annot=True, fmt='.2f', annot_kws={'size':7}, 
+                         cmap=cmap_enter, vmin=-.9, vmax=.9, 
+                         xticklabels=var_list_labels, yticklabels=var_list_labels)  #  
+ 
+df_hr_mean.columns
+var_list = ['resting_hr', 'resting_hr_lag1', 'alcohol_lag1', 'sleeping_hr', 
+            'temp', 'month_ts', 'start_sleep_time', 'weekend', 
+            'hr_before_sleep_30_lag1', 'steps_lag1', 'elevation_lag1', 
+            'active_lag1', 'steps_intensity_60_lag1']
+
+plot_corr_matrix_heatmap(df_hr_mean, var_list, var_list)
+
+
+# plot heatmap of corrs at diff thresholds of lag or w diff windows of cumulative
+# bascially i want a heatmap with corrs.
+# could also do this with partial or semi-partial corr, holding constant prior
+# lag of resting hr. so if examining activity of lag 10, hold constant resting
+# hr of lag 10 too (but not lag1)? i guess.
+
+df_test = df_hr_mean.copy(deep=True)
+dv = 'resting_hr'
+var_list_wout_dv = ['resting_hr_lag1', 'alcohol_lag1', 'sleeping_hr', 
+            'start_sleep_time', 'hr_before_sleep_30_lag1', 'steps_lag1', 
+            'elevation_lag1', 'active_lag1', 'steps_intensity_60_lag1']
+
+def create_days_forward_for_dv_to_provide_lags(df, lags, dv, date_to_dv_dict):
+    for date_forward in range(1,lags+1):
+        print(date_forward)
+        df = create_lagged_future_date_variables(date_forward, 'date_sleep', df)
+        dv_forward = dv+'_forward'+str(date_forward)
+        df[dv_forward] = df['date_forward_'+str(date_forward)].map(date_to_dv_dict)
+    return df
+
+def correlation_matrix(df_temp, var_list_wout_dv, dv_forward):
+    df_temp = df_temp[var_list_wout_dv+[dv_forward]].dropna()
+    df_temp = df_temp[[dv_forward]+var_list_wout_dv]
+    coeffmat = np.zeros((len(var_list_wout_dv)+1, len(var_list_wout_dv)+1))
+    pvalmat = np.zeros((len(var_list_wout_dv)+1, len(var_list_wout_dv)+1))
+    for i in range(len(var_list_wout_dv)+1):    
+        for j in range(len(var_list_wout_dv)+1):        
+            corrtest = pearsonr(df_temp[df_temp.columns[i]], df_temp[df_temp.columns[j]])  
+            coeffmat[i,j] = corrtest[0]
+            pvalmat[i,j] = corrtest[1]
+    dfcoeff = pd.DataFrame(coeffmat, columns=df_temp.columns, index=df_temp.columns)
+    dfcoeff = dfcoeff.round(decimals=3)
+    dfpvals = pd.DataFrame(np.round(pvalmat,3), columns=df_temp.columns, index=df_temp.columns)
+    dfcoeff = dfcoeff[[dv_forward]]
+    dfcoeff = dfcoeff[dfcoeff.index!=dv_forward]
+    dfpvals = dfpvals[[dv_forward]]
+    dfpvals = dfpvals[dfpvals.index!=dv_forward]
+    return dfcoeff, dfpvals
+
+def viz_corrs_of_lagged_variables_with_dv(df, lags, dv, var_list_wout_dv, date_to_dv_dict):
+    df_temp = create_days_forward_for_dv_to_provide_lags(df, lags, dv, date_to_dv_dict)
+    dfcoeff_all_lags = pd.DataFrame()
+    dfpvals_all_lags = pd.DataFrame()
+    for date_forward in range(1,lags+1):
+        print(date_forward)
+        dv_forward = dv+'_forward'+str(date_forward)
+        dfcoeff, dfpvals = correlation_matrix(df_temp, var_list_wout_dv, dv_forward)
+        dfcoeff_all_lags = pd.concat([dfcoeff_all_lags, dfcoeff], axis=1)
+        dfpvals_all_lags = pd.concat([dfpvals_all_lags, dfpvals], axis=1)
+    return dfcoeff_all_lags, dfpvals_all_lags
+
+
+dfcoeff_all_lags, dfpvals_all_lags = viz_corrs_of_lagged_variables_with_dv(df_test, 10, 'resting_hr', var_list_wout_dv, date_to_hr_resting_dict)
+# i need to get the n here to see how much i'm shinking sample size
+    
+fig = plt.figure(figsize=(8, 6))  
+cmap_enter = sns.diverging_palette(15, 125, sep=10, s=70, l=50, as_cmap=True)
+sns.heatmap(dfcoeff_all_lags, center=0, square=False, annot=True, fmt='.2f', 
+            annot_kws={'size':11}, cmap=cmap_enter, vmin=-.4, vmax=.4, 
+            cbar_kws=dict(use_gridspec=False, location='top'))  # cbar=False,  
+
+
+# NEXT --
+# MAKE SURE NOT LOOSING TONS OF N FOR CORR
+# CAN I GET PARTIAL OR SEMI-PARTIAL (YEAH) CORRS? HOW TO COMPUTE?
+# PARTIALLING OUT PRIOR RESTING HR AT THE SAME LAG
+
 
 
 
