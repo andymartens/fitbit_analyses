@@ -4,10 +4,9 @@ Created on Sat Dec 24 16:23:34 2016
 
 @author: charlesmartens
 
-to do
-data/work w coltrane and good music
-
-
+Purpose:
+As keep organizing, think this file should be file for structing the data
+and saving dictionaires that can then be mapped onto analytic file.
 
 Anaylyses: 
 Develop resting HR metrics to help validate HR while asleep as measure of sleep 
@@ -629,13 +628,14 @@ date_sleep_to_hr_60_min_before_sleep_lag_10_dict = dict(zip(df_hr_prior_to_sleep
 date_sleep_to_hr_120_min_before_sleep_lag_10_dict = dict(zip(df_hr_prior_to_sleep['date_sleep'],
                                                             df_hr_prior_to_sleep['hr_rolling_120_min_lag_10_min']))
 
+# NEED TO RE-SAVE THESE:
 # save dict
 with open('date_sleep_to_hr_30_min_before_sleep_lag_10_dict.pkl', 'wb') as picklefile:
 	pickle.dump(date_sleep_to_hr_30_min_before_sleep_lag_10_dict, picklefile)
-with open('date_sleep_to_hr_30_min_before_sleep_lag_10_dict.pkl', 'wb') as picklefile:
-	pickle.dump(date_sleep_to_hr_30_min_before_sleep_lag_10_dict, picklefile)
-with open('date_sleep_to_hr_30_min_before_sleep_lag_10_dict.pkl', 'wb') as picklefile:
-	pickle.dump(date_sleep_to_hr_30_min_before_sleep_lag_10_dict, picklefile)
+with open('date_sleep_to_hr_60_min_before_sleep_lag_10_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_sleep_to_hr_60_min_before_sleep_lag_10_dict, picklefile)
+with open('date_sleep_to_hr_120_min_before_sleep_lag_10_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_sleep_to_hr_120_min_before_sleep_lag_10_dict, picklefile)
 
 # =============================================================================
 

@@ -4,13 +4,15 @@ Created on Sat Dec 24 16:23:34 2016
 
 @author: charlesmartens
 
+Purpose:
+Now I'm doing the key anys here. But also doing a lot of structuring. 
+Change so do main anys in another file and keep this for structing.
+
 Analyses:
 Alcohol on HR while asleep (presented at Google).
 
 """
 
-# get new sleep quality metrics
-# start on L 2210
 
 ## ===============================================================
 ## save df with sedentary hr mean ea day as measure of resting hr
@@ -334,7 +336,7 @@ df_sleep_dates = pd.read_pickle('df_sleep_skeleton.pkl')
 sleep_datetime_list = df_sleep_dates['date_time'].values
 len(sleep_datetime_list)
 
-df_hr_awake = df_hr[r-df_hr['date_time'].isin(sleep_datetime_list)]
+df_hr_awake = df_hr[-df_hr['date_time'].isin(sleep_datetime_list)]
 df_hr_sleep = df_hr[df_hr['date_time'].isin(sleep_datetime_list)]
 
 df_hr_awake.shape  # (599287, 4)
@@ -489,6 +491,10 @@ df_daily_qs_w_alcohol_from_6_1_17[['date_lag_1', 'alcohol']]
 # alt date to alcohol dict starting a bit later
 #date_to_alcohol_dict = dict(zip(df_daily_qs_w_alcohol_from_6_1_17['date_prior'], df_daily_qs_w_alcohol_from_6_1_17['alcohol']))
 date_to_alcohol_dict = dict(zip(df_daily_qs['date_lag_1'], df_daily_qs['alcohol']))
+
+with open('date_to_alcohol_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_to_alcohol_dict, picklefile)
+
 df_sleep['alcohol'] = df_sleep['date_sleep'].map(date_to_alcohol_dict)
 len(df_sleep)  # 725079
 len(df_sleep['date_sleep'].unique())  # 708
@@ -498,6 +504,9 @@ len(df_test[df_test.notnull()])  # 480 days w alcohol ratings
 
 df_daily_qs['alcohol_type'].unique()
 date_to_alcohol_type_dict = dict(zip(df_daily_qs['date_lag_1'], df_daily_qs['alcohol_type']))
+
+with open('date_to_alcohol_type_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_to_alcohol_type_dict, picklefile)
 
 # truncate so only alcohol days
 df_sleep = df_sleep[df_sleep['alcohol'].notnull()]
@@ -1087,6 +1096,10 @@ df_hr_mean['hr_mean'].hist(alpha=.5, bins=25, color='dodgerblue' )
 plt.grid(False)
 plt.axvline(df_hr_mean['hr_mean'].mean(), linestyle='--', color='black', linewidth=1, alpha=.75)
 
+df_hr_mean.to_pickle('df_by_day_for_anys.pkl')
+
+df_hr_mean.shape
+df_hr_mean.columns
 
 # ----------------------------------------------------------------------------
 # imported daily ratings earlier already
@@ -1349,6 +1362,8 @@ df_hr_mean['month_ts'] = np.nan
 df_month_ordered = df_hr_mean.groupby(['year', 'month']).size().reset_index()
 df_month_ordered['year_month'] = df_month_ordered['year'].astype(str)+' '+df_month_ordered['month'].astype(str)
 year_month_to_month_ordered_dict = dict(zip(df_month_ordered['year_month'], df_month_ordered.index))
+
+
 df_hr_mean['year_month'] = df_hr_mean['year'].astype(str)+' '+df_hr_mean['month'].astype(str)
 df_hr_mean['month_ts'] = df_hr_mean['year_month'].map(year_month_to_month_ordered_dict)
 
@@ -1383,13 +1398,15 @@ df_start_sleep_time['start_sleep'].hist()
 date_to_start_sleep_dict = dict(zip(df_start_sleep_time['date_sleep'], df_start_sleep_time['start_sleep']))
 df_hr_mean['start_sleep_time'] = df_hr_mean['date_sleep'].map(date_to_start_sleep_dict)
 
-sns.relplot(x='start_sleep_time', y='hr_mean', data=df_hr_mean, kind='line')
+with open('date_to_start_sleep_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_to_start_sleep_dict, picklefile)
+
+
 sns.lmplot(x='start_sleep_time', y='hr_mean', data=df_hr_mean, 
            scatter_kws={'alpha':.2}, lowess=True)
 
 sns.barplot(x='start_sleep_time', y='hr_mean', color='blue', alpha=.8, data=df_hr_mean, ci=None)
 plt.ylim(40,65)
-
 
 results = smf.ols(formula = """hr_mean ~ alcohol + tue + wed + thu + fri + 
                   sat + sun + temp + month_ts + start_sleep_time + 
@@ -1406,6 +1423,9 @@ df_hr_mean['min_asleep'] = df_hr_mean['date_sleep'].map(date_to_min_asleep_dict)
 df_hr_mean['min_asleep'].hist()
 df_hr_mean['min_asleep'].mean()/60
 
+with open('date_to_min_asleep_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_to_min_asleep_dict, picklefile)
+
 sns.lmplot(x='min_asleep', y='hr_mean', data=df_hr_mean, lowess=True)
 sns.lmplot(x='min_asleep', y='hr_mean', data=df_hr_mean[df_hr_mean['min_asleep']<700], lowess=True)
 
@@ -1414,7 +1434,6 @@ results = smf.ols(formula = """hr_mean ~ alcohol + tue + wed + thu + fri +
                   sat + sun + temp + I(temp**2) + month_ts + start_sleep_time + 
                   I(start_sleep_time**2) + min_asleep + I(min_asleep**2)""", data=df_hr_mean).fit()
 print(results.summary())
-
 
 df_sleep_8_to_11.columns
 df_sleep_8_to_11['date_time']
@@ -1519,6 +1538,14 @@ date_to_subjective_sleep_dict = dict(zip(df_daily_qs['date_lag_1'], df_daily_qs[
 date_to_fun_dict = dict(zip(df_daily_qs['date_lag_1'], df_daily_qs['fun']))
 date_to_energy_dict = dict(zip(df_daily_qs['date_lag_1'], df_daily_qs['energy']))
 
+with open('date_to_subjective_sleep_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_to_subjective_sleep_dict, picklefile)
+with open('date_to_fun_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_to_fun_dict, picklefile)
+with open('date_to_energy_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_to_energy_dict, picklefile)
+
+
 df_hr_mean['subj_sleep'] = df_hr_mean['date_sleep'].map(date_to_subjective_sleep_dict)
 len(df_hr_mean[df_hr_mean['subj_sleep'].notnull()])
 
@@ -1617,6 +1644,10 @@ print(results.summary())
 
 date_sleep_to_start_sleep_time_dict = dict(zip(df_hr_mean['date_sleep'], df_hr_mean['start_sleep_time']))
 df_hr_mean['start_sleep_time_lag'] = df_hr_mean['date_lag_1'].map(date_sleep_to_start_sleep_time_dict)
+
+with open('date_sleep_to_start_sleep_time_dict.pkl', 'wb') as picklefile:
+	pickle.dump(date_sleep_to_start_sleep_time_dict, picklefile)
+
 
 results = smf.ols(formula = """alcohol ~ hr_mean_lag1""", data=df_hr_mean).fit()
 print(results.summary())
@@ -2857,7 +2888,6 @@ def plot_hr_sleep_heatmap(df_sleep_hr_for_heatmap, metric):
         df_date_sleep = df_date_sleep[[metric]]
         df_date_sleep.columns = [metric+'_'+str(date_sleep)[:10]]
         df_date_sleep_base = df_date_sleep_base.join(df_date_sleep)
-
     del df_date_sleep_base[0]
     df_date_sleep_base.index = np.round(df_date_sleep_base.index, 3)
     return df_date_sleep_base
@@ -3191,11 +3221,6 @@ with open('date_to_floors_dict.pkl', 'wb') as picklefile:
 
 # same in json file downloaded from website.
 df_activity_elevation[df_activity_elevation['date']=='2017-05-16']
-
-
-
-
-
 
 
 
